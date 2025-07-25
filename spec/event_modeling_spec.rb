@@ -22,7 +22,7 @@ describe EventModeling do
         event_store.append_event(stream_id, event)
         events = event_store.get_events(stream_id)
 
-        expect(events).to have(1).item
+        expect(events.size).to eq(1)
         expect(events.first[:type]).to eq('UserCreated')
         expect(events.first[:data]).to eq({ name: 'John' })
       end
@@ -35,7 +35,7 @@ describe EventModeling do
         event_store.append_event(stream_id, event2)
 
         events = event_store.get_events(stream_id)
-        expect(events).to have(2).items
+        expect(events.size).to eq(2)
         expect(events[0][:type]).to eq('UserCreated')
         expect(events[1][:type]).to eq('UserUpdated')
       end
@@ -71,8 +71,8 @@ describe EventModeling do
         event_store.append_event(stream1, event1)
         event_store.append_event(stream2, event2)
 
-        expect(event_store.get_events(stream1)).to have(1).item
-        expect(event_store.get_events(stream2)).to have(1).item
+        expect(event_store.get_events(stream1).size).to eq(1)
+        expect(event_store.get_events(stream2).size).to eq(1)
         expect(event_store.get_events(stream1).first[:type]).to eq('Event1')
         expect(event_store.get_events(stream2).first[:type]).to eq('Event2')
       end
@@ -89,7 +89,7 @@ describe EventModeling do
         event_store.append_events(stream_id, events)
         stored_events = event_store.get_events(stream_id)
 
-        expect(stored_events).to have(3).items
+        expect(stored_events.size).to eq(3)
         expect(stored_events.map { |e| e[:type] }).to eq(%w[UserCreated UserUpdated UserDeleted])
       end
 
