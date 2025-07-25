@@ -73,12 +73,27 @@ module EventModeling
 
     def append_event_with_expected_version(stream_id, event, expected_version)
       current_version = get_stream_version(stream_id)
-      
+
       if current_version != expected_version
-        raise ConcurrencyError, "Expected version #{expected_version}, but current version is #{current_version} for stream '#{stream_id}'"
+        raise ConcurrencyError,
+              "Expected version #{expected_version}, but current version is #{current_version} for stream '#{stream_id}'"
       end
-      
+
       append_event(stream_id, event)
+    end
+
+    def get_stream_metadata(stream_id)
+      return nil unless @streams.key?(stream_id) && !@streams[stream_id].empty?
+
+      events = @streams[stream_id]
+      first_event = events.first
+      last_event = events.last
+
+      {
+        version: events.length,
+        created_at: first_event[:timestamp],
+        last_event_timestamp: last_event[:timestamp]
+      }
     end
   end
 end

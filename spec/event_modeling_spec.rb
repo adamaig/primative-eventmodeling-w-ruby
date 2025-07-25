@@ -481,7 +481,45 @@ describe EventModeling do
     end
 
     describe '#get_stream_metadata' do
-      it 'returns stream metadata including version'
+      it 'returns stream metadata including version' do
+        # Append events to create metadata
+        event_store.append_event(stream_id, { type: 'Event1', data: {} })
+        event_store.append_event(stream_id, { type: 'Event2', data: {} })
+
+        metadata = event_store.get_stream_metadata(stream_id)
+
+        expect(metadata).to be_a(Hash)
+        expect(metadata[:version]).to eq(2)
+        expect(metadata[:created_at]).to be_a(Time)
+        expect(metadata[:last_event_timestamp]).to be_a(Time)
+      end
+
+      it 'returns nil for non-existent streams' do
+        metadata = event_store.get_stream_metadata('non-existent-stream')
+        expect(metadata).to be_nil
+      end
+
+      it 'updates metadata after events are appended' do
+        # Append first event
+        first_time = Time.now
+        allow(Time).to receive(:now).and_return(first_time)
+        event_store.append_event(stream_id, { type: 'Event1', data: {} })
+
+        metadata1 = event_store.get_stream_metadata(stream_id)
+        expect(metadata1[:version]).to eq(1)
+        expect(metadata1[:created_at]).to eq(first_time)
+        expect(metadata1[:last_event_timestamp]).to eq(first_time)
+
+        # Append second event with different timestamp
+        second_time = first_time + 60 # 1 minute later
+        allow(Time).to receive(:now).and_return(second_time)
+        event_store.append_event(stream_id, { type: 'Event2', data: {} })
+
+        metadata2 = event_store.get_stream_metadata(stream_id)
+        expect(metadata2[:version]).to eq(2)
+        expect(metadata2[:created_at]).to eq(first_time) # Created time doesn't change
+        expect(metadata2[:last_event_timestamp]).to eq(second_time) # Last event time updates
+      end
     end
 
     # Querying & Projections
