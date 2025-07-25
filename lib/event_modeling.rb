@@ -95,5 +95,10 @@ module EventModeling
         last_event_timestamp: last_event[:timestamp]
       }
     end
+
+    def get_events_by_type(event_type)
+      all_events = get_all_events
+      all_events.select { |event| event[:type] == event_type }
+    end
   end
 end

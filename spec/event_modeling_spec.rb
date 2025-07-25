@@ -524,7 +524,76 @@ describe EventModeling do
 
     # Querying & Projections
     describe '#get_events_by_type' do
-      it 'filters events by type'
+      it 'filters events by type' do
+        # Setup events across multiple streams with different types
+        event_store.append_event('stream1', { type: 'UserCreated', data: { name: 'Alice' } })
+        event_store.append_event('stream2', { type: 'OrderPlaced', data: { amount: 100 } })
+        event_store.append_event('stream1', { type: 'UserUpdated', data: { name: 'Alice Smith' } })
+        event_store.append_event('stream3', { type: 'UserCreated', data: { name: 'Bob' } })
+        event_store.append_event('stream2', { type: 'OrderShipped', data: { tracking: '123' } })
+        
+        user_created_events = event_store.get_events_by_type('UserCreated')
+        
+        expect(user_created_events.length).to eq(2)
+        expect(user_created_events[0][:type]).to eq('UserCreated')
+        expect(user_created_events[0][:data][:name]).to eq('Alice')
+        expect(user_created_events[1][:type]).to eq('UserCreated')
+        expect(user_created_events[1][:data][:name]).to eq('Bob')
+      end
+
+      it 'returns events in chronological order' do
+        # Use specific timestamps to control order
+        first_time = Time.now
+        second_time = first_time + 30
+        third_time = first_time + 60
+        
+        allow(Time).to receive(:now).and_return(first_time)
+        event_store.append_event('stream1', { type: 'TestEvent', data: { order: 1 } })
+        
+        allow(Time).to receive(:now).and_return(third_time)
+        event_store.append_event('stream2', { type: 'TestEvent', data: { order: 3 } })
+        
+        allow(Time).to receive(:now).and_return(second_time)
+        event_store.append_event('stream3', { type: 'TestEvent', data: { order: 2 } })
+        
+        events = event_store.get_events_by_type('TestEvent')
+        
+        expect(events.length).to eq(3)
+        expect(events[0][:data][:order]).to eq(1) # First chronologically
+        expect(events[1][:data][:order]).to eq(2) # Second chronologically
+        expect(events[2][:data][:order]).to eq(3) # Third chronologically
+      end
+
+      it 'returns empty array for non-existent types' do
+        event_store.append_event('stream1', { type: 'UserCreated', data: {} })
+        event_store.append_event('stream2', { type: 'OrderPlaced', data: {} })
+        
+        events = event_store.get_events_by_type('NonExistentType')
+        expect(events).to eq([])
+      end
+
+      it 'uses case-sensitive type matching' do
+        event_store.append_event('stream1', { type: 'UserCreated', data: {} })
+        event_store.append_event('stream2', { type: 'usercreated', data: {} })
+        event_store.append_event('stream3', { type: 'USERCREATED', data: {} })
+        
+        exact_match_events = event_store.get_events_by_type('UserCreated')
+        expect(exact_match_events.length).to eq(1)
+        expect(exact_match_events[0][:type]).to eq('UserCreated')
+        
+        lowercase_events = event_store.get_events_by_type('usercreated')
+        expect(lowercase_events.length).to eq(1)
+        expect(lowercase_events[0][:type]).to eq('usercreated')
+        
+        uppercase_events = event_store.get_events_by_type('USERCREATED')
+        expect(uppercase_events.length).to eq(1)
+        expect(uppercase_events[0][:type]).to eq('USERCREATED')
+      end
+
+      it 'returns empty array when no events exist' do
+        events = event_store.get_events_by_type('AnyType')
+        expect(events).to eq([])
+      end
     end
 
     describe '#get_events_in_range' do
