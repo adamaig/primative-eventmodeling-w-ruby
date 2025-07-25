@@ -56,5 +56,14 @@ module EventModeling
       return chronological_events if from_position <= 0
       chronological_events.drop(from_position)
     end
+
+    def stream_exists?(stream_id)
+      @streams.key?(stream_id) && !@streams[stream_id].empty?
+    end
+
+    def get_stream_version(stream_id)
+      return 0 unless @streams.key?(stream_id)
+      @streams[stream_id].length
+    end
   end
 end

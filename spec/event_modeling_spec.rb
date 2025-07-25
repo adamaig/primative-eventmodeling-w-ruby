@@ -292,13 +292,97 @@ describe EventModeling do
 
     # Stream Management
     describe '#stream_exists?' do
-      it 'returns true if stream exists'
-      it 'returns false if stream does not exist'
+      it 'returns true for streams with events' do
+        event_store.append_event(stream_id, event)
+
+        expect(event_store.stream_exists?(stream_id)).to be true
+      end
+
+      it 'returns false for non-existent streams' do
+        expect(event_store.stream_exists?('non-existent-stream')).to be false
+      end
+
+      it 'returns true for streams with multiple events' do
+        event_store.append_event(stream_id, { type: 'Event1', data: {} })
+        event_store.append_event(stream_id, { type: 'Event2', data: {} })
+
+        expect(event_store.stream_exists?(stream_id)).to be true
+      end
+
+      it 'returns false for empty stream that was never used' do
+        # Create another stream but not the one we're checking
+        event_store.append_event('other-stream', event)
+
+        expect(event_store.stream_exists?(stream_id)).to be false
+      end
+
+      it 'returns true immediately after first event is appended' do
+        expect(event_store.stream_exists?(stream_id)).to be false
+        
+        event_store.append_event(stream_id, event)
+        
+        expect(event_store.stream_exists?(stream_id)).to be true
+      end
     end
 
     describe '#get_stream_version' do
-      it 'returns the current version of a stream'
-      it 'returns 0 for non-existent stream'
+      it 'returns the current version of a stream' do
+        event_store.append_event(stream_id, { type: 'Event1', data: {} })
+        event_store.append_event(stream_id, { type: 'Event2', data: {} })
+        event_store.append_event(stream_id, { type: 'Event3', data: {} })
+
+        version = event_store.get_stream_version(stream_id)
+
+        expect(version).to eq(3)
+      end
+
+      it 'returns 0 for non-existent stream' do
+        version = event_store.get_stream_version('non-existent-stream')
+
+        expect(version).to eq(0)
+      end
+
+      it 'returns 1 after first event is appended' do
+        expect(event_store.get_stream_version(stream_id)).to eq(0)
+        
+        event_store.append_event(stream_id, event)
+        
+        expect(event_store.get_stream_version(stream_id)).to eq(1)
+      end
+
+      it 'increments version correctly with multiple appends' do
+        expect(event_store.get_stream_version(stream_id)).to eq(0)
+        
+        event_store.append_event(stream_id, { type: 'Event1', data: {} })
+        expect(event_store.get_stream_version(stream_id)).to eq(1)
+        
+        event_store.append_event(stream_id, { type: 'Event2', data: {} })
+        expect(event_store.get_stream_version(stream_id)).to eq(2)
+      end
+
+      it 'handles batch appends correctly' do
+        events = [
+          { type: 'Event1', data: {} },
+          { type: 'Event2', data: {} },
+          { type: 'Event3', data: {} }
+        ]
+        
+        event_store.append_events(stream_id, events)
+        
+        expect(event_store.get_stream_version(stream_id)).to eq(3)
+      end
+
+      it 'maintains independent versions across streams' do
+        stream1 = 'stream-1'
+        stream2 = 'stream-2'
+        
+        event_store.append_event(stream1, { type: 'Event1', data: {} })
+        event_store.append_event(stream2, { type: 'Event2', data: {} })
+        event_store.append_event(stream1, { type: 'Event3', data: {} })
+        
+        expect(event_store.get_stream_version(stream1)).to eq(2)
+        expect(event_store.get_stream_version(stream2)).to eq(1)
+      end
     end
 
     describe '#delete_stream' do
