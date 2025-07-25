@@ -41,5 +41,20 @@ module EventModeling
     def get_events(stream_id)
       @streams[stream_id] || []
     end
+
+    def get_events_from_version(stream_id, version)
+      stream_events = @streams[stream_id] || []
+      return stream_events if version <= 1
+      
+      stream_events.select { |event| event[:version] >= version }
+    end
+
+    def get_all_events(from_position = 0)
+      all_events = @streams.values.flatten
+      chronological_events = all_events.sort_by { |event| event[:timestamp] }
+      
+      return chronological_events if from_position <= 0
+      chronological_events.drop(from_position)
+    end
   end
 end

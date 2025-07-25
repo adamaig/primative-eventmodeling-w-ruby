@@ -1,4 +1,5 @@
 require 'spec_helper'
+require 'time'
 
 describe EventModeling do
   include EventModeling
@@ -159,12 +160,134 @@ describe EventModeling do
     end
 
     describe '#get_events_from_version' do
-      it 'gets events from a specific version onwards'
+      it 'gets events from a specific version onwards' do
+        # Setup events with versions 1, 2, 3
+        event_store.append_event(stream_id, { type: 'Event1', data: {} })
+        event_store.append_event(stream_id, { type: 'Event2', data: {} })
+        event_store.append_event(stream_id, { type: 'Event3', data: {} })
+
+        events = event_store.get_events_from_version(stream_id, 2)
+
+        expect(events.size).to eq(2)
+        expect(events[0][:type]).to eq('Event2')
+        expect(events[1][:type]).to eq('Event3')
+        expect(events[0][:version]).to eq(2)
+        expect(events[1][:version]).to eq(3)
+      end
+
+      it 'returns all events when version is 1' do
+        event_store.append_event(stream_id, { type: 'Event1', data: {} })
+        event_store.append_event(stream_id, { type: 'Event2', data: {} })
+
+        events = event_store.get_events_from_version(stream_id, 1)
+
+        expect(events.size).to eq(2)
+        expect(events[0][:version]).to eq(1)
+        expect(events[1][:version]).to eq(2)
+      end
+
+      it 'returns empty array when version is higher than stream' do
+        event_store.append_event(stream_id, { type: 'Event1', data: {} })
+
+        events = event_store.get_events_from_version(stream_id, 5)
+
+        expect(events).to be_empty
+      end
+
+      it 'returns empty array for non-existent stream' do
+        events = event_store.get_events_from_version('non-existent', 1)
+
+        expect(events).to be_empty
+      end
+
+      it 'returns all events when version is 0' do
+        event_store.append_event(stream_id, { type: 'Event1', data: {} })
+        event_store.append_event(stream_id, { type: 'Event2', data: {} })
+
+        events = event_store.get_events_from_version(stream_id, 0)
+
+        expect(events.size).to eq(2)
+      end
     end
 
     describe '#get_all_events' do
-      it 'gets all events across all streams'
-      it 'gets all events from a specific position'
+      it 'gets all events across all streams' do
+        stream1 = 'stream-1'
+        stream2 = 'stream-2'
+        
+        event_store.append_event(stream1, { type: 'Event1', data: { source: 'stream1' } })
+        event_store.append_event(stream2, { type: 'Event2', data: { source: 'stream2' } })
+        event_store.append_event(stream1, { type: 'Event3', data: { source: 'stream1' } })
+
+        all_events = event_store.get_all_events
+
+        expect(all_events.size).to eq(3)
+        types = all_events.map { |e| e[:type] }
+        expect(types).to include('Event1', 'Event2', 'Event3')
+      end
+
+      it 'returns events in chronological order by timestamp' do
+        stream1 = 'stream-1'
+        stream2 = 'stream-2'
+        
+        time1 = Time.parse('2025-01-01 10:00:00')
+        time2 = Time.parse('2025-01-01 10:01:00')
+        time3 = Time.parse('2025-01-01 10:02:00')
+        
+        allow(Time).to receive(:now).and_return(time1)
+        event_store.append_event(stream1, { type: 'First', data: {} })
+        
+        allow(Time).to receive(:now).and_return(time3)
+        event_store.append_event(stream2, { type: 'Third', data: {} })
+        
+        allow(Time).to receive(:now).and_return(time2)
+        event_store.append_event(stream1, { type: 'Second', data: {} })
+
+        all_events = event_store.get_all_events
+        
+        expect(all_events.size).to eq(3)
+        expect(all_events[0][:type]).to eq('First')
+        expect(all_events[1][:type]).to eq('Second')
+        expect(all_events[2][:type]).to eq('Third')
+      end
+
+      it 'returns empty array when no events exist' do
+        all_events = event_store.get_all_events
+
+        expect(all_events).to be_empty
+      end
+
+      it 'gets all events from a specific position' do
+        stream1 = 'stream-1'
+        stream2 = 'stream-2'
+        
+        time1 = Time.parse('2025-01-01 10:00:00')
+        time2 = Time.parse('2025-01-01 10:01:00')
+        time3 = Time.parse('2025-01-01 10:02:00')
+        
+        allow(Time).to receive(:now).and_return(time1)
+        event_store.append_event(stream1, { type: 'First', data: {} })
+        
+        allow(Time).to receive(:now).and_return(time2)
+        event_store.append_event(stream2, { type: 'Second', data: {} })
+        
+        allow(Time).to receive(:now).and_return(time3)
+        event_store.append_event(stream1, { type: 'Third', data: {} })
+
+        events_from_position = event_store.get_all_events(1)
+        
+        expect(events_from_position.size).to eq(2)
+        expect(events_from_position[0][:type]).to eq('Second')
+        expect(events_from_position[1][:type]).to eq('Third')
+      end
+
+      it 'handles from_position greater than total events' do
+        event_store.append_event(stream_id, { type: 'OnlyEvent', data: {} })
+
+        events = event_store.get_all_events(5)
+
+        expect(events).to be_empty
+      end
     end
 
     # Stream Management
