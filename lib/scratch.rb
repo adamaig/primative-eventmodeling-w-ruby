@@ -1,0 +1,4 @@
+
+module Scratch
+
+end

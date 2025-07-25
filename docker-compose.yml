@@ -1,0 +1,8 @@
+
+services:
+  ruby-event-modeling:
+    image: mcr.microsoft.com/devcontainers/ruby:latest
+    volumes:
+      # Mount the root folder that contains .git
+      - .:/workspace:cached
+    command: sleep infinity
