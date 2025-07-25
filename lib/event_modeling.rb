@@ -3,6 +3,9 @@
 # This file is part of the EventModeling library.
 # It defines the EventStore class and its methods.
 module EventModeling
+  # Custom error for concurrency conflicts
+  class ConcurrencyError < StandardError; end
+
   # EventStore class to manage events
   class EventStore
     def initialize
@@ -45,15 +48,16 @@ module EventModeling
     def get_events_from_version(stream_id, version)
       stream_events = @streams[stream_id] || []
       return stream_events if version <= 1
-      
+
       stream_events.select { |event| event[:version] >= version }
     end
 
     def get_all_events(from_position = 0)
       all_events = @streams.values.flatten
       chronological_events = all_events.sort_by { |event| event[:timestamp] }
-      
+
       return chronological_events if from_position <= 0
+
       chronological_events.drop(from_position)
     end
 
@@ -63,7 +67,18 @@ module EventModeling
 
     def get_stream_version(stream_id)
       return 0 unless @streams.key?(stream_id)
+
       @streams[stream_id].length
+    end
+
+    def append_event_with_expected_version(stream_id, event, expected_version)
+      current_version = get_stream_version(stream_id)
+      
+      if current_version != expected_version
+        raise ConcurrencyError, "Expected version #{expected_version}, but current version is #{current_version} for stream '#{stream_id}'"
+      end
+      
+      append_event(stream_id, event)
     end
   end
 end

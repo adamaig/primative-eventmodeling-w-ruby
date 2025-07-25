@@ -214,7 +214,7 @@ describe EventModeling do
       it 'gets all events across all streams' do
         stream1 = 'stream-1'
         stream2 = 'stream-2'
-        
+
         event_store.append_event(stream1, { type: 'Event1', data: { source: 'stream1' } })
         event_store.append_event(stream2, { type: 'Event2', data: { source: 'stream2' } })
         event_store.append_event(stream1, { type: 'Event3', data: { source: 'stream1' } })
@@ -229,22 +229,22 @@ describe EventModeling do
       it 'returns events in chronological order by timestamp' do
         stream1 = 'stream-1'
         stream2 = 'stream-2'
-        
+
         time1 = Time.parse('2025-01-01 10:00:00')
         time2 = Time.parse('2025-01-01 10:01:00')
         time3 = Time.parse('2025-01-01 10:02:00')
-        
+
         allow(Time).to receive(:now).and_return(time1)
         event_store.append_event(stream1, { type: 'First', data: {} })
-        
+
         allow(Time).to receive(:now).and_return(time3)
         event_store.append_event(stream2, { type: 'Third', data: {} })
-        
+
         allow(Time).to receive(:now).and_return(time2)
         event_store.append_event(stream1, { type: 'Second', data: {} })
 
         all_events = event_store.get_all_events
-        
+
         expect(all_events.size).to eq(3)
         expect(all_events[0][:type]).to eq('First')
         expect(all_events[1][:type]).to eq('Second')
@@ -260,22 +260,22 @@ describe EventModeling do
       it 'gets all events from a specific position' do
         stream1 = 'stream-1'
         stream2 = 'stream-2'
-        
+
         time1 = Time.parse('2025-01-01 10:00:00')
         time2 = Time.parse('2025-01-01 10:01:00')
         time3 = Time.parse('2025-01-01 10:02:00')
-        
+
         allow(Time).to receive(:now).and_return(time1)
         event_store.append_event(stream1, { type: 'First', data: {} })
-        
+
         allow(Time).to receive(:now).and_return(time2)
         event_store.append_event(stream2, { type: 'Second', data: {} })
-        
+
         allow(Time).to receive(:now).and_return(time3)
         event_store.append_event(stream1, { type: 'Third', data: {} })
 
         events_from_position = event_store.get_all_events(1)
-        
+
         expect(events_from_position.size).to eq(2)
         expect(events_from_position[0][:type]).to eq('Second')
         expect(events_from_position[1][:type]).to eq('Third')
@@ -318,9 +318,9 @@ describe EventModeling do
 
       it 'returns true immediately after first event is appended' do
         expect(event_store.stream_exists?(stream_id)).to be false
-        
+
         event_store.append_event(stream_id, event)
-        
+
         expect(event_store.stream_exists?(stream_id)).to be true
       end
     end
@@ -344,18 +344,18 @@ describe EventModeling do
 
       it 'returns 1 after first event is appended' do
         expect(event_store.get_stream_version(stream_id)).to eq(0)
-        
+
         event_store.append_event(stream_id, event)
-        
+
         expect(event_store.get_stream_version(stream_id)).to eq(1)
       end
 
       it 'increments version correctly with multiple appends' do
         expect(event_store.get_stream_version(stream_id)).to eq(0)
-        
+
         event_store.append_event(stream_id, { type: 'Event1', data: {} })
         expect(event_store.get_stream_version(stream_id)).to eq(1)
-        
+
         event_store.append_event(stream_id, { type: 'Event2', data: {} })
         expect(event_store.get_stream_version(stream_id)).to eq(2)
       end
@@ -366,20 +366,20 @@ describe EventModeling do
           { type: 'Event2', data: {} },
           { type: 'Event3', data: {} }
         ]
-        
+
         event_store.append_events(stream_id, events)
-        
+
         expect(event_store.get_stream_version(stream_id)).to eq(3)
       end
 
       it 'maintains independent versions across streams' do
         stream1 = 'stream-1'
         stream2 = 'stream-2'
-        
+
         event_store.append_event(stream1, { type: 'Event1', data: {} })
         event_store.append_event(stream2, { type: 'Event2', data: {} })
         event_store.append_event(stream1, { type: 'Event3', data: {} })
-        
+
         expect(event_store.get_stream_version(stream1)).to eq(2)
         expect(event_store.get_stream_version(stream2)).to eq(1)
       end
@@ -391,8 +391,93 @@ describe EventModeling do
 
     # Concurrency Control
     describe '#append_event_with_expected_version' do
-      it 'appends event when expected version matches'
-      it 'raises error when expected version does not match'
+      it 'appends event when expected version matches current version' do
+        # Setup: append 2 events to get to version 2
+        event_store.append_event(stream_id, { type: 'Event1', data: {} })
+        event_store.append_event(stream_id, { type: 'Event2', data: {} })
+
+        # Expect version 2, append new event
+        new_event = { type: 'Event3', data: { name: 'test' } }
+        event_store.append_event_with_expected_version(stream_id, new_event, 2)
+
+        events = event_store.get_events(stream_id)
+        expect(events.size).to eq(3)
+        expect(events.last[:type]).to eq('Event3')
+        expect(events.last[:version]).to eq(3)
+      end
+
+      it 'appends event to new stream when expected version is 0' do
+        new_event = { type: 'FirstEvent', data: { name: 'initial' } }
+        event_store.append_event_with_expected_version(stream_id, new_event, 0)
+
+        events = event_store.get_events(stream_id)
+        expect(events.size).to eq(1)
+        expect(events.first[:type]).to eq('FirstEvent')
+        expect(events.first[:version]).to eq(1)
+      end
+
+      it 'raises ConcurrencyError when expected version is lower than current' do
+        # Setup: append 2 events to get to version 2
+        event_store.append_event(stream_id, { type: 'Event1', data: {} })
+        event_store.append_event(stream_id, { type: 'Event2', data: {} })
+
+        # Try to append with expected version 1 (but current is 2)
+        new_event = { type: 'Event3', data: {} }
+
+        expect do
+          event_store.append_event_with_expected_version(stream_id, new_event, 1)
+        end.to raise_error(EventModeling::ConcurrencyError)
+      end
+
+      it 'raises ConcurrencyError when expected version is higher than current' do
+        # Setup: append 1 event to get to version 1
+        event_store.append_event(stream_id, { type: 'Event1', data: {} })
+
+        # Try to append with expected version 5 (but current is 1)
+        new_event = { type: 'Event2', data: {} }
+
+        expect do
+          event_store.append_event_with_expected_version(stream_id, new_event, 5)
+        end.to raise_error(EventModeling::ConcurrencyError)
+      end
+
+      it 'raises ConcurrencyError when trying to append to non-existent stream with non-zero version' do
+        new_event = { type: 'Event1', data: {} }
+
+        expect do
+          event_store.append_event_with_expected_version('non-existent', new_event, 1)
+        end.to raise_error(EventModeling::ConcurrencyError)
+      end
+
+      it 'includes meaningful error message with current and expected versions' do
+        # Setup: append 2 events to get to version 2
+        event_store.append_event(stream_id, { type: 'Event1', data: {} })
+        event_store.append_event(stream_id, { type: 'Event2', data: {} })
+
+        new_event = { type: 'Event3', data: {} }
+
+        expect do
+          event_store.append_event_with_expected_version(stream_id, new_event, 1)
+        end.to raise_error(EventModeling::ConcurrencyError, /Expected version 1.*current version is 2/i)
+      end
+
+      it 'does not modify stream when concurrency error occurs' do
+        # Setup: append 2 events to get to version 2
+        event_store.append_event(stream_id, { type: 'Event1', data: {} })
+        event_store.append_event(stream_id, { type: 'Event2', data: {} })
+
+        original_events = event_store.get_events(stream_id).dup
+        new_event = { type: 'Event3', data: {} }
+
+        expect do
+          event_store.append_event_with_expected_version(stream_id, new_event, 1)
+        end.to raise_error(EventModeling::ConcurrencyError)
+
+        # Stream should be unchanged
+        current_events = event_store.get_events(stream_id)
+        expect(current_events).to eq(original_events)
+        expect(current_events.size).to eq(2)
+      end
     end
 
     describe '#get_stream_metadata' do
