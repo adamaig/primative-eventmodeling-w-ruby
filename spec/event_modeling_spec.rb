@@ -155,8 +155,38 @@ describe EventModeling do
 
     # Event Retrieval
     describe '#get_events' do
-      it 'gets all events for a specific stream'
-      it 'gets events from a specific version'
+      it 'gets all events for a specific stream' do
+        # Add events to multiple streams
+        event_store.append_event(stream_id, { type: 'Event1', data: { value: 1 } })
+        event_store.append_event(stream_id, { type: 'Event2', data: { value: 2 } })
+        event_store.append_event('other-stream', { type: 'OtherEvent', data: {} })
+        
+        events = event_store.get_events(stream_id)
+        
+        expect(events.length).to eq(2)
+        expect(events[0][:type]).to eq('Event1')
+        expect(events[1][:type]).to eq('Event2')
+        expect(events[0][:data][:value]).to eq(1)
+        expect(events[1][:data][:value]).to eq(2)
+      end
+
+      it 'returns empty array for non-existent stream' do
+        events = event_store.get_events('non-existent-stream')
+        expect(events).to eq([])
+      end
+
+      it 'returns events in order they were appended' do
+        event_store.append_event(stream_id, { type: 'First', data: {} })
+        event_store.append_event(stream_id, { type: 'Second', data: {} })
+        event_store.append_event(stream_id, { type: 'Third', data: {} })
+        
+        events = event_store.get_events(stream_id)
+        
+        expect(events.length).to eq(3)
+        expect(events[0][:type]).to eq('First')
+        expect(events[1][:type]).to eq('Second')
+        expect(events[2][:type]).to eq('Third')
+      end
     end
 
     describe '#get_events_from_version' do
