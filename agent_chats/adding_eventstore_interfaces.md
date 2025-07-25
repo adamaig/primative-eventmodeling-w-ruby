@@ -1,3 +1,4 @@
+Agent: Claude Sonnet 4
 
 adamaig: What interface methods should be part of an eventstore
 
