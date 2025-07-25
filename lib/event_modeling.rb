@@ -100,5 +100,19 @@ module EventModeling
       all_events = get_all_events
       all_events.select { |event| event[:type] == event_type }
     end
+
+    def get_events_in_range(from_timestamp, to_timestamp)
+      all_events = get_all_events
+      
+      all_events.select do |event|
+        event_time = event[:timestamp]
+        
+        # Handle nil timestamps
+        from_condition = from_timestamp.nil? || event_time >= from_timestamp
+        to_condition = to_timestamp.nil? || event_time <= to_timestamp
+        
+        from_condition && to_condition
+      end
+    end
   end
 end

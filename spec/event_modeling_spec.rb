@@ -597,7 +597,94 @@ describe EventModeling do
     end
 
     describe '#get_events_in_range' do
-      it 'returns events within time range'
+      it 'returns events within time range' do
+        # Setup events with specific timestamps
+        base_time = Time.now
+        early_time = base_time - 60    # 1 minute before
+        middle_time = base_time        # current time
+        late_time = base_time + 60     # 1 minute after
+        
+        allow(Time).to receive(:now).and_return(early_time)
+        event_store.append_event('stream1', { type: 'EarlyEvent', data: {} })
+        
+        allow(Time).to receive(:now).and_return(middle_time)
+        event_store.append_event('stream2', { type: 'MiddleEvent', data: {} })
+        
+        allow(Time).to receive(:now).and_return(late_time)
+        event_store.append_event('stream3', { type: 'LateEvent', data: {} })
+        
+        # Test inclusive range
+        events_in_range = event_store.get_events_in_range(early_time, middle_time)
+        
+        expect(events_in_range.length).to eq(2)
+        expect(events_in_range[0][:type]).to eq('EarlyEvent')
+        expect(events_in_range[1][:type]).to eq('MiddleEvent')
+      end
+
+      it 'handles edge cases with nil timestamps' do
+        base_time = Time.now
+        
+        allow(Time).to receive(:now).and_return(base_time)
+        event_store.append_event('stream1', { type: 'TestEvent', data: {} })
+        
+        # Nil from_timestamp should include from beginning
+        events_from_nil = event_store.get_events_in_range(nil, base_time + 60)
+        expect(events_from_nil.length).to eq(1)
+        
+        # Nil to_timestamp should include to end
+        events_to_nil = event_store.get_events_in_range(base_time - 60, nil)
+        expect(events_to_nil.length).to eq(1)
+        
+        # Both nil should return all events
+        events_both_nil = event_store.get_events_in_range(nil, nil)
+        expect(events_both_nil.length).to eq(1)
+      end
+
+      it 'returns empty array for invalid ranges' do
+        base_time = Time.now
+        
+        allow(Time).to receive(:now).and_return(base_time)
+        event_store.append_event('stream1', { type: 'TestEvent', data: {} })
+        
+        # Range where from > to should return empty
+        events = event_store.get_events_in_range(base_time + 60, base_time - 60)
+        expect(events).to eq([])
+        
+        # Range that doesn't include any events
+        events_before = event_store.get_events_in_range(base_time - 120, base_time - 60)
+        expect(events_before).to eq([])
+        
+        events_after = event_store.get_events_in_range(base_time + 60, base_time + 120)
+        expect(events_after).to eq([])
+      end
+
+      it 'maintains chronological order' do
+        base_time = Time.now
+        times = [
+          base_time - 60,  # First
+          base_time + 60,  # Third  
+          base_time,       # Second
+          base_time + 120  # Fourth
+        ]
+        
+        times.each_with_index do |time, index|
+          allow(Time).to receive(:now).and_return(time)
+          event_store.append_event("stream#{index}", { type: 'TestEvent', data: { order: index } })
+        end
+        
+        # Get events in middle range
+        events = event_store.get_events_in_range(base_time - 30, base_time + 90)
+        
+        expect(events.length).to eq(2)
+        expect(events[0][:data][:order]).to eq(2) # Second chronologically (base_time)
+        expect(events[1][:data][:order]).to eq(1) # Third chronologically (base_time + 60)
+      end
+
+      it 'returns empty array when no events exist' do
+        base_time = Time.now
+        events = event_store.get_events_in_range(base_time - 60, base_time + 60)
+        expect(events).to eq([])
+      end
     end
 
     describe '#subscribe_to_stream' do
