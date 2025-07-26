@@ -112,7 +112,7 @@ event_store.subscribe_to_stream(stream_id, subscription)
 
 ## Agent Conversation Tracking
 - **Session Documentation**: Save all AI pair programming sessions in `/agent_chats/` directory
-- **File Naming**: Create new file for each git commit cycle, named by session theme (e.g., `adding_eventstore_interfaces.md`, `implementing_stream_management.md`)
+- **File Naming**: Create new file for each git commit cycle, with datetime prefix in format `YYYYMMDD-HH.MM_session_theme.md` (e.g., `20250726-12.30_library_refactoring_plan.md`, `20250726-14.15_implementing_stream_management.md`)
 - **Header Format**: Include date with timestamp, agent name with model (e.g., "GitHub Copilot (GPT-4)", "Claude Sonnet 3.5"), and session theme
 - **Content Structure**: Two main sections:
   1. **Summary Section**: Key insights, implementation decisions, architecture changes, and next steps
