@@ -7,7 +7,7 @@ module EventModeling
   class ConcurrencyError < StandardError; end
 
   # EventStore class to manage events in an in-memory event sourcing system.
-  # 
+  #
   # This class provides a complete EventStore implementation for educational purposes,
   # demonstrating event-driven architecture patterns including event persistence,
   # retrieval, stream management, concurrency control, querying, pub/sub subscriptions,
@@ -31,7 +31,7 @@ module EventModeling
   # @since 1.0.0
   class EventStore
     # Initialize a new EventStore instance.
-    # 
+    #
     # Creates empty storage for streams, subscriptions, and snapshots.
     # All data is stored in memory and will be lost when the instance is destroyed.
     def initialize
@@ -39,7 +39,7 @@ module EventModeling
     end
 
     # Returns an empty array for backward compatibility.
-    # 
+    #
     # @return [Array] empty array
     # @deprecated This method exists for compatibility but returns empty array
     def events
@@ -47,7 +47,7 @@ module EventModeling
     end
 
     # Appends a single event to the specified stream.
-    # 
+    #
     # The event will be automatically enhanced with a sequential version number
     # starting from 1 and a timestamp. Subscribers to the stream will be notified.
     # If the stream doesn't exist, it will be created automatically.
@@ -74,7 +74,7 @@ module EventModeling
     end
 
     # Appends multiple events to the specified stream in a single operation.
-    # 
+    #
     # All events will be enhanced with sequential version numbers and timestamps.
     # Version numbers continue from the current stream version. Subscribers will
     # be notified for each event in the batch.
@@ -107,7 +107,7 @@ module EventModeling
     end
 
     # Retrieves all events for the specified stream.
-    # 
+    #
     # Events are returned in the order they were appended, with version numbers
     # starting from 1. Each event includes the original data plus version and timestamp.
     #
@@ -122,7 +122,7 @@ module EventModeling
     end
 
     # Retrieves events from the specified stream starting from a specific version.
-    # 
+    #
     # Returns all events with version number greater than or equal to the specified version.
     # If version is 1 or less, returns all events. Useful for rebuilding state from a
     # specific point in time.
@@ -141,7 +141,7 @@ module EventModeling
     end
 
     # Retrieves all events across all streams in chronological order.
-    # 
+    #
     # Events are sorted by their timestamp to provide a global chronological view.
     # Optionally skip a number of events from the beginning using from_position.
     #
@@ -163,7 +163,7 @@ module EventModeling
     end
 
     # Checks if the specified stream exists and contains events.
-    # 
+    #
     # A stream is considered to exist if it has been created and contains at least one event.
     # Streams are created automatically when the first event is appended.
     #
@@ -179,7 +179,7 @@ module EventModeling
     end
 
     # Gets the current version (number of events) for the specified stream.
-    # 
+    #
     # Version numbers start from 1 for the first event. Returns 0 for non-existent
     # or empty streams. The version represents the total number of events in the stream.
     #
@@ -196,7 +196,7 @@ module EventModeling
     end
 
     # Appends an event to a stream with concurrency control using expected version.
-    # 
+    #
     # This method provides optimistic concurrency control by requiring the caller
     # to specify the expected current version. If the actual version doesn't match,
     # a ConcurrencyError is raised, indicating another process has modified the stream.
@@ -222,7 +222,7 @@ module EventModeling
     end
 
     # Gets metadata about the specified stream.
-    # 
+    #
     # Returns information including current version, creation timestamp, and
     # last event timestamp. Useful for monitoring and diagnostics.
     #
@@ -247,7 +247,7 @@ module EventModeling
     end
 
     # Retrieves all events of a specific type across all streams.
-    # 
+    #
     # Filters events by exact type matching (case-sensitive) and returns them
     # in chronological order by timestamp. Useful for building projections
     # or finding all occurrences of a particular event type.
@@ -263,7 +263,7 @@ module EventModeling
     end
 
     # Retrieves events within a specific time range across all streams.
-    # 
+    #
     # Filters events by timestamp, supporting inclusive range queries.
     # Either boundary can be nil to create open-ended ranges.
     # Results are returned in chronological order.
@@ -290,7 +290,7 @@ module EventModeling
     end
 
     # Commits pending events to storage.
-    # 
+    #
     # In this in-memory implementation, events are immediately persisted when appended,
     # so this method is a no-op provided for compatibility with transaction-based
     # EventStore implementations. Always returns true to indicate success.
@@ -307,7 +307,7 @@ module EventModeling
     end
 
     # Deletes a stream and all its events.
-    # 
+    #
     # Completely removes the stream from storage. After deletion, the stream
     # will not exist and get_stream_version will return 0. This operation
     # cannot be undone. Handles non-existent streams gracefully.
@@ -323,7 +323,7 @@ module EventModeling
     end
 
     # Subscribes a callback to receive real-time notifications for new events in a stream.
-    # 
+    #
     # The callback will be invoked immediately when events are appended to the specified
     # stream. Multiple subscribers can be registered for the same stream. Subscribers
     # only receive events for their specific stream, not global events.
@@ -344,7 +344,7 @@ module EventModeling
     end
 
     # Saves a snapshot of aggregate state for the specified stream.
-    # 
+    #
     # Snapshots provide a performance optimization by storing the computed state
     # at a specific version, allowing faster state reconstruction. New snapshots
     # overwrite previous ones for the same stream. The snapshot includes the
@@ -369,7 +369,7 @@ module EventModeling
     end
 
     # Retrieves the latest snapshot for the specified stream.
-    # 
+    #
     # Returns the most recently saved snapshot containing the aggregate state data,
     # version, and timestamp. Used for optimizing state reconstruction by starting
     # from a known state rather than replaying all events from the beginning.
@@ -389,7 +389,7 @@ module EventModeling
     private
 
     # Notifies all subscribers for a stream about a new event.
-    # 
+    #
     # Calls each registered callback for the specified stream, passing the
     # new event as an argument. Handles errors gracefully to prevent one
     # failing subscriber from affecting others.
