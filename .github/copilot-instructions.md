@@ -28,6 +28,20 @@ The EventStore follows a comprehensive interface pattern with these core method 
 - Use `bundle exec rspec` to run tests
 - Use `bundle exec guard` for continuous testing during development
 
+### Implementation Process
+1. **Write Tests**: Implement comprehensive specs before writing code
+2. **Implement Methods**: Make tests pass with clean, idiomatic Ruby code
+3. **Add Documentation**: Include comprehensive YARD documentation for all public methods
+4. **Validate**: Run full test suite to ensure everything works correctly
+
+### Documentation Requirements
+- All public methods must include comprehensive YARD documentation
+- Include `@param`, `@return`, `@raise`, and `@example` tags where applicable
+- Document expected behavior, edge cases, and usage patterns
+- Use descriptive class and module documentation explaining purpose and patterns
+- Include `@since` tags for version tracking
+- Mark private methods with `@api private` tag
+
 ### Event Structure Convention
 ```ruby
 # Standard event format (input)
@@ -93,6 +107,8 @@ event_store.subscribe_to_stream(stream_id, subscription)
 - Follow module namespacing: `EventModeling::ClassName`
 - Auto-require all lib files via `spec_helper.rb` pattern
 - Use RSpec matchers like `have(n).items` for collection assertions
+- Comprehensive YARD documentation for all public methods and classes
+- Include examples in YARD docs showing typical usage patterns
 
 ## Agent Conversation Tracking
 - **Session Documentation**: Save all AI pair programming sessions in `/agent_chats/` directory
