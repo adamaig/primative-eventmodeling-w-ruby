@@ -38,14 +38,12 @@ RSpec.describe EventModeling::ConcurrencyError do
     end
 
     it 'can be caught as EventModeling::Error' do
-      expect {
-        begin
-          raise described_class, 'concurrency conflict'
-        rescue EventModeling::Error => e
-          expect(e).to be_a(described_class)
-          raise 'caught successfully'
-        end
-      }.to raise_error('caught successfully')
+      expect do
+        raise described_class, 'concurrency conflict'
+      rescue EventModeling::Error => e
+        expect(e).to be_a(described_class)
+        raise 'caught successfully'
+      end.to raise_error('caught successfully')
     end
   end
 end
@@ -68,14 +66,12 @@ RSpec.describe EventModeling::StreamNotFoundError do
     end
 
     it 'can be caught as EventModeling::Error' do
-      expect {
-        begin
-          raise described_class, 'stream not found'
-        rescue EventModeling::Error => e
-          expect(e).to be_a(described_class)
-          raise 'caught successfully'
-        end
-      }.to raise_error('caught successfully')
+      expect do
+        raise described_class, 'stream not found'
+      rescue EventModeling::Error => e
+        expect(e).to be_a(described_class)
+        raise 'caught successfully'
+      end.to raise_error('caught successfully')
     end
   end
 end
@@ -98,14 +94,12 @@ RSpec.describe EventModeling::InvalidEventError do
     end
 
     it 'can be caught as EventModeling::Error' do
-      expect {
-        begin
-          raise described_class, 'invalid event data'
-        rescue EventModeling::Error => e
-          expect(e).to be_a(described_class)
-          raise 'caught successfully'
-        end
-      }.to raise_error('caught successfully')
+      expect do
+        raise described_class, 'invalid event data'
+      rescue EventModeling::Error => e
+        expect(e).to be_a(described_class)
+        raise 'caught successfully'
+      end.to raise_error('caught successfully')
     end
   end
 end
