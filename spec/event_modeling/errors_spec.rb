@@ -103,3 +103,31 @@ RSpec.describe EventModeling::InvalidEventError do
     end
   end
 end
+
+RSpec.describe EventModeling::InvalidCommandError do
+  describe 'inheritance' do
+    it 'inherits from EventModeling::Error' do
+      expect(described_class).to be < EventModeling::Error
+    end
+
+    it 'indirectly inherits from StandardError' do
+      expect(described_class).to be < StandardError
+    end
+  end
+
+  describe 'usage' do
+    it 'can be raised with an invalid command message' do
+      message = 'Command type must be a String'
+      expect { raise described_class, message }.to raise_error(described_class, message)
+    end
+
+    it 'can be caught as EventModeling::Error' do
+      expect do
+        raise described_class, 'invalid command data'
+      rescue EventModeling::Error => e
+        expect(e).to be_a(described_class)
+        raise 'caught successfully'
+      end.to raise_error('caught successfully')
+    end
+  end
+end

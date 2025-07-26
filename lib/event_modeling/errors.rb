@@ -12,4 +12,7 @@ module EventModeling
 
   # Error raised for invalid event data
   class InvalidEventError < Error; end
+
+  # Error raised for invalid command data
+  class InvalidCommandError < Error; end
 end

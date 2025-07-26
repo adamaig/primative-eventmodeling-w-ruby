@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
+require 'time'
 
 RSpec.describe EventModeling do
   describe 'module structure' do
@@ -19,11 +20,17 @@ RSpec.describe EventModeling do
       expect(EventModeling::Event).to be_a(Class)
     end
 
+    it 'includes Command class' do
+      expect(defined?(EventModeling::Command)).to eq('constant')
+      expect(EventModeling::Command).to be_a(Class)
+    end
+
     it 'includes error hierarchy' do
       expect(defined?(EventModeling::Error)).to eq('constant')
       expect(defined?(EventModeling::ConcurrencyError)).to eq('constant')
       expect(defined?(EventModeling::StreamNotFoundError)).to eq('constant')
       expect(defined?(EventModeling::InvalidEventError)).to eq('constant')
+      expect(defined?(EventModeling::InvalidCommandError)).to eq('constant')
     end
 
     it 'includes version constant' do
@@ -83,8 +90,53 @@ RSpec.describe EventModeling do
       event1 = described_class.new_event(type: event_type, data: event_data)
       event2 = described_class.new_event(type: event_type, data: event_data)
 
-      expect(event1).not_to equal(event2)
-      expect(event1).to eq(event2) # Same content
+      expect(event1).not_to be(event2)
+      expect(event1).to eq(event2)
+    end
+  end
+
+  describe '.new_command' do
+    let(:command_type) { 'CreateUser' }
+    let(:command_data) { { name: 'John', email: 'john@example.com' } }
+
+    it 'creates a new Command instance' do
+      command = described_class.new_command(type: command_type, data: command_data)
+
+      expect(command).to be_a(EventModeling::Command)
+      expect(command.type).to eq(command_type)
+      expect(command.data).to eq(command_data)
+      expect(command.command_id).to be_a(String)
+      expect(command.created_at).to be_a(Time)
+    end
+
+    it 'creates commands with validation' do
+      expect do
+        described_class.new_command(type: 123, data: command_data)
+      end.to raise_error(EventModeling::InvalidCommandError, 'Command type must be a String')
+    end
+
+    it 'accepts explicit command_id and created_at' do
+      custom_id = 'custom-command-id'
+      custom_time = Time.parse('2025-01-01 12:00:00 UTC')
+
+      command = described_class.new_command(
+        type: command_type,
+        data: command_data,
+        command_id: custom_id,
+        created_at: custom_time
+      )
+
+      expect(command.command_id).to eq(custom_id)
+      expect(command.created_at).to eq(custom_time)
+    end
+
+    it 'creates independent Command instances' do
+      command1 = described_class.new_command(type: command_type, data: command_data)
+      command2 = described_class.new_command(type: command_type, data: command_data)
+
+      expect(command1).not_to be(command2)
+      expect(command1).not_to eq(command2) # Different command_ids
+      expect(command1.command_id).not_to eq(command2.command_id)
     end
   end
 
