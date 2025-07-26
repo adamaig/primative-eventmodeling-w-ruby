@@ -150,7 +150,12 @@ describe EventModeling do
     end
 
     describe '#commit' do
-      it 'persists pending events'
+      it 'persists pending events' do
+        # In in-memory implementation, events are immediately persisted
+        # commit() should be a no-op that returns true
+        result = event_store.commit
+        expect(result).to be true
+      end
     end
 
     # Event Retrieval
@@ -160,9 +165,9 @@ describe EventModeling do
         event_store.append_event(stream_id, { type: 'Event1', data: { value: 1 } })
         event_store.append_event(stream_id, { type: 'Event2', data: { value: 2 } })
         event_store.append_event('other-stream', { type: 'OtherEvent', data: {} })
-        
+
         events = event_store.get_events(stream_id)
-        
+
         expect(events.length).to eq(2)
         expect(events[0][:type]).to eq('Event1')
         expect(events[1][:type]).to eq('Event2')
@@ -179,9 +184,9 @@ describe EventModeling do
         event_store.append_event(stream_id, { type: 'First', data: {} })
         event_store.append_event(stream_id, { type: 'Second', data: {} })
         event_store.append_event(stream_id, { type: 'Third', data: {} })
-        
+
         events = event_store.get_events(stream_id)
-        
+
         expect(events.length).to eq(3)
         expect(events[0][:type]).to eq('First')
         expect(events[1][:type]).to eq('Second')
@@ -416,7 +421,25 @@ describe EventModeling do
     end
 
     describe '#delete_stream' do
-      it 'marks a stream as deleted'
+      it 'marks a stream as deleted' do
+        # Setup: add events to stream
+        event_store.append_event(stream_id, event)
+        expect(event_store.stream_exists?(stream_id)).to be true
+        expect(event_store.get_events(stream_id)).not_to be_empty
+
+        # Delete the stream
+        event_store.delete_stream(stream_id)
+
+        # Verify stream is deleted
+        expect(event_store.stream_exists?(stream_id)).to be false
+        expect(event_store.get_events(stream_id)).to be_empty
+        expect(event_store.get_stream_version(stream_id)).to eq(0)
+      end
+
+      it 'handles deletion of non-existent stream gracefully' do
+        expect { event_store.delete_stream('non-existent') }.not_to raise_error
+        expect(event_store.stream_exists?('non-existent')).to be false
+      end
     end
 
     # Concurrency Control
@@ -561,9 +584,9 @@ describe EventModeling do
         event_store.append_event('stream1', { type: 'UserUpdated', data: { name: 'Alice Smith' } })
         event_store.append_event('stream3', { type: 'UserCreated', data: { name: 'Bob' } })
         event_store.append_event('stream2', { type: 'OrderShipped', data: { tracking: '123' } })
-        
+
         user_created_events = event_store.get_events_by_type('UserCreated')
-        
+
         expect(user_created_events.length).to eq(2)
         expect(user_created_events[0][:type]).to eq('UserCreated')
         expect(user_created_events[0][:data][:name]).to eq('Alice')
@@ -576,18 +599,18 @@ describe EventModeling do
         first_time = Time.now
         second_time = first_time + 30
         third_time = first_time + 60
-        
+
         allow(Time).to receive(:now).and_return(first_time)
         event_store.append_event('stream1', { type: 'TestEvent', data: { order: 1 } })
-        
+
         allow(Time).to receive(:now).and_return(third_time)
         event_store.append_event('stream2', { type: 'TestEvent', data: { order: 3 } })
-        
+
         allow(Time).to receive(:now).and_return(second_time)
         event_store.append_event('stream3', { type: 'TestEvent', data: { order: 2 } })
-        
+
         events = event_store.get_events_by_type('TestEvent')
-        
+
         expect(events.length).to eq(3)
         expect(events[0][:data][:order]).to eq(1) # First chronologically
         expect(events[1][:data][:order]).to eq(2) # Second chronologically
@@ -597,7 +620,7 @@ describe EventModeling do
       it 'returns empty array for non-existent types' do
         event_store.append_event('stream1', { type: 'UserCreated', data: {} })
         event_store.append_event('stream2', { type: 'OrderPlaced', data: {} })
-        
+
         events = event_store.get_events_by_type('NonExistentType')
         expect(events).to eq([])
       end
@@ -606,15 +629,15 @@ describe EventModeling do
         event_store.append_event('stream1', { type: 'UserCreated', data: {} })
         event_store.append_event('stream2', { type: 'usercreated', data: {} })
         event_store.append_event('stream3', { type: 'USERCREATED', data: {} })
-        
+
         exact_match_events = event_store.get_events_by_type('UserCreated')
         expect(exact_match_events.length).to eq(1)
         expect(exact_match_events[0][:type]).to eq('UserCreated')
-        
+
         lowercase_events = event_store.get_events_by_type('usercreated')
         expect(lowercase_events.length).to eq(1)
         expect(lowercase_events[0][:type]).to eq('usercreated')
-        
+
         uppercase_events = event_store.get_events_by_type('USERCREATED')
         expect(uppercase_events.length).to eq(1)
         expect(uppercase_events[0][:type]).to eq('USERCREATED')
@@ -633,19 +656,19 @@ describe EventModeling do
         early_time = base_time - 60    # 1 minute before
         middle_time = base_time        # current time
         late_time = base_time + 60     # 1 minute after
-        
+
         allow(Time).to receive(:now).and_return(early_time)
         event_store.append_event('stream1', { type: 'EarlyEvent', data: {} })
-        
+
         allow(Time).to receive(:now).and_return(middle_time)
         event_store.append_event('stream2', { type: 'MiddleEvent', data: {} })
-        
+
         allow(Time).to receive(:now).and_return(late_time)
         event_store.append_event('stream3', { type: 'LateEvent', data: {} })
-        
+
         # Test inclusive range
         events_in_range = event_store.get_events_in_range(early_time, middle_time)
-        
+
         expect(events_in_range.length).to eq(2)
         expect(events_in_range[0][:type]).to eq('EarlyEvent')
         expect(events_in_range[1][:type]).to eq('MiddleEvent')
@@ -653,18 +676,18 @@ describe EventModeling do
 
       it 'handles edge cases with nil timestamps' do
         base_time = Time.now
-        
+
         allow(Time).to receive(:now).and_return(base_time)
         event_store.append_event('stream1', { type: 'TestEvent', data: {} })
-        
+
         # Nil from_timestamp should include from beginning
         events_from_nil = event_store.get_events_in_range(nil, base_time + 60)
         expect(events_from_nil.length).to eq(1)
-        
+
         # Nil to_timestamp should include to end
         events_to_nil = event_store.get_events_in_range(base_time - 60, nil)
         expect(events_to_nil.length).to eq(1)
-        
+
         # Both nil should return all events
         events_both_nil = event_store.get_events_in_range(nil, nil)
         expect(events_both_nil.length).to eq(1)
@@ -672,18 +695,18 @@ describe EventModeling do
 
       it 'returns empty array for invalid ranges' do
         base_time = Time.now
-        
+
         allow(Time).to receive(:now).and_return(base_time)
         event_store.append_event('stream1', { type: 'TestEvent', data: {} })
-        
+
         # Range where from > to should return empty
         events = event_store.get_events_in_range(base_time + 60, base_time - 60)
         expect(events).to eq([])
-        
+
         # Range that doesn't include any events
         events_before = event_store.get_events_in_range(base_time - 120, base_time - 60)
         expect(events_before).to eq([])
-        
+
         events_after = event_store.get_events_in_range(base_time + 60, base_time + 120)
         expect(events_after).to eq([])
       end
@@ -692,19 +715,19 @@ describe EventModeling do
         base_time = Time.now
         times = [
           base_time - 60,  # First
-          base_time + 60,  # Third  
+          base_time + 60,  # Third
           base_time,       # Second
           base_time + 120  # Fourth
         ]
-        
+
         times.each_with_index do |time, index|
           allow(Time).to receive(:now).and_return(time)
           event_store.append_event("stream#{index}", { type: 'TestEvent', data: { order: index } })
         end
-        
+
         # Get events in middle range
         events = event_store.get_events_in_range(base_time - 30, base_time + 90)
-        
+
         expect(events.length).to eq(2)
         expect(events[0][:data][:order]).to eq(2) # Second chronologically (base_time)
         expect(events[1][:data][:order]).to eq(1) # Third chronologically (base_time + 60)
@@ -718,16 +741,115 @@ describe EventModeling do
     end
 
     describe '#subscribe_to_stream' do
-      it 'sets up real-time subscription to stream'
+      it 'sets up real-time subscription to stream' do
+        received_events = []
+        callback = ->(event) { received_events << event }
+
+        # Subscribe to stream
+        event_store.subscribe_to_stream(stream_id, callback)
+
+        # Append events and verify they're received by subscriber
+        event1 = { type: 'UserCreated', data: { name: 'John' } }
+        event2 = { type: 'UserUpdated', data: { name: 'Jane' } }
+
+        event_store.append_event(stream_id, event1)
+        event_store.append_event(stream_id, event2)
+
+        expect(received_events.size).to eq(2)
+        expect(received_events[0][:type]).to eq('UserCreated')
+        expect(received_events[1][:type]).to eq('UserUpdated')
+      end
+
+      it 'supports multiple subscribers to same stream' do
+        received_events_1 = []
+        received_events_2 = []
+
+        callback_1 = ->(event) { received_events_1 << event }
+        callback_2 = ->(event) { received_events_2 << event }
+
+        event_store.subscribe_to_stream(stream_id, callback_1)
+        event_store.subscribe_to_stream(stream_id, callback_2)
+
+        event_store.append_event(stream_id, event)
+
+        expect(received_events_1.size).to eq(1)
+        expect(received_events_2.size).to eq(1)
+        expect(received_events_1.first[:type]).to eq('UserCreated')
+        expect(received_events_2.first[:type]).to eq('UserCreated')
+      end
+
+      it 'only notifies subscribers of events in their subscribed stream' do
+        received_events = []
+        callback = ->(event) { received_events << event }
+
+        event_store.subscribe_to_stream(stream_id, callback)
+
+        # Append to subscribed stream
+        event_store.append_event(stream_id, event)
+
+        # Append to different stream
+        event_store.append_event('other-stream', { type: 'OtherEvent', data: {} })
+
+        expect(received_events.size).to eq(1)
+        expect(received_events.first[:type]).to eq('UserCreated')
+      end
     end
 
     # Snapshots (Optional)
     describe '#save_snapshot' do
-      it 'stores aggregate snapshot'
+      it 'stores aggregate snapshot' do
+        # Setup stream with events
+        event_store.append_event(stream_id, { type: 'UserCreated', data: { name: 'John' } })
+        event_store.append_event(stream_id, { type: 'UserUpdated', data: { name: 'Jane' } })
+
+        current_version = event_store.get_stream_version(stream_id)
+        snapshot_data = { name: 'Jane', id: 123 }
+
+        # Save snapshot
+        event_store.save_snapshot(stream_id, snapshot_data, current_version)
+
+        # Verify snapshot exists
+        snapshot = event_store.get_snapshot(stream_id)
+        expect(snapshot).not_to be_nil
+        expect(snapshot[:data]).to eq(snapshot_data)
+        expect(snapshot[:version]).to eq(current_version)
+        expect(snapshot[:timestamp]).to be_a(Time)
+      end
+
+      it 'overwrites previous snapshot for same stream' do
+        snapshot1 = { name: 'John' }
+        snapshot2 = { name: 'Jane' }
+
+        event_store.save_snapshot(stream_id, snapshot1, 1)
+        event_store.save_snapshot(stream_id, snapshot2, 2)
+
+        snapshot = event_store.get_snapshot(stream_id)
+        expect(snapshot[:data]).to eq(snapshot2)
+        expect(snapshot[:version]).to eq(2)
+      end
     end
 
     describe '#get_snapshot' do
-      it 'retrieves latest snapshot'
+      it 'retrieves latest snapshot' do
+        snapshot_data = { user_id: 123, name: 'John' }
+        event_store.save_snapshot(stream_id, snapshot_data, 5)
+
+        result = event_store.get_snapshot(stream_id)
+        expect(result[:data]).to eq(snapshot_data)
+        expect(result[:version]).to eq(5)
+        expect(result[:timestamp]).to be_a(Time)
+      end
+
+      it 'returns nil for non-existent snapshot' do
+        result = event_store.get_snapshot('non-existent-stream')
+        expect(result).to be_nil
+      end
+
+      it 'returns nil for stream without snapshots' do
+        event_store.append_event(stream_id, event)
+        result = event_store.get_snapshot(stream_id)
+        expect(result).to be_nil
+      end
     end
   end
 end

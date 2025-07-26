@@ -24,6 +24,7 @@ module EventModeling
       enhanced_event[:timestamp] = Time.now
 
       @streams[stream_id] << enhanced_event
+      notify_subscribers(stream_id, enhanced_event)
     end
 
     def append_events(stream_id, events)
@@ -38,6 +39,7 @@ module EventModeling
         enhanced_event[:timestamp] = Time.now
 
         @streams[stream_id] << enhanced_event
+        notify_subscribers(stream_id, enhanced_event)
       end
     end
 
@@ -103,15 +105,54 @@ module EventModeling
 
     def get_events_in_range(from_timestamp, to_timestamp)
       all_events = get_all_events
-      
+
       all_events.select do |event|
         event_time = event[:timestamp]
-        
+
         # Handle nil timestamps
         from_condition = from_timestamp.nil? || event_time >= from_timestamp
         to_condition = to_timestamp.nil? || event_time <= to_timestamp
-        
+
         from_condition && to_condition
+      end
+    end
+
+    def commit
+      # In-memory implementation - events are immediately persisted
+      # This method is a no-op for compatibility with transaction-based EventStores
+      true
+    end
+
+    def delete_stream(stream_id)
+      @streams.delete(stream_id)
+    end
+
+    def subscribe_to_stream(stream_id, callback)
+      @subscriptions ||= {}
+      @subscriptions[stream_id] ||= []
+      @subscriptions[stream_id] << callback
+    end
+
+    def save_snapshot(stream_id, snapshot_data, version)
+      @snapshots ||= {}
+      @snapshots[stream_id] = {
+        data: snapshot_data,
+        version: version,
+        timestamp: Time.now
+      }
+    end
+
+    def get_snapshot(stream_id)
+      @snapshots&.dig(stream_id)
+    end
+
+    private
+
+    def notify_subscribers(stream_id, event)
+      return unless @subscriptions&.key?(stream_id)
+
+      @subscriptions[stream_id].each do |callback|
+        callback.call(event)
       end
     end
   end
