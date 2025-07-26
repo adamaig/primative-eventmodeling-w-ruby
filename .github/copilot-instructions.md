@@ -34,6 +34,35 @@ The EventStore follows a comprehensive interface pattern with these core method 
 3. **Add Documentation**: Include comprehensive YARD documentation for all public methods
 4. **Validate**: Run full test suite to ensure everything works correctly
 
+### Refactoring Guidelines
+- **Single Responsibility Per Commit**: Each commit should contain exactly one conceptual change
+- **Atomic Changes**: Complete one logical unit of work before moving to the next
+- **Test-Driven Refactoring**: Write failing tests first, then make them pass
+- **Incremental Steps**: Break large refactorings into small, verifiable steps
+- **Backward Compatibility**: Maintain all existing interfaces during incremental changes
+- **Validation Between Steps**: Run full test suite after each atomic change
+
+### Commit Message Guidelines
+- Use present tense imperative mood ("Add feature" not "Added feature")
+- Start with a verb (Add, Extract, Refactor, Fix, Update)
+- Keep first line under 50 characters
+- Include detailed description if needed
+- Reference relevant specs or documentation changes
+
+### Maximum Change Limits Per Session
+- **Files Created**: Maximum 2 new files per session
+- **Files Modified**: Maximum 3 existing files per session
+- **Lines Changed**: Maximum 100 lines of functional code per session
+- **Test Files**: 1 new test file per session, covering the single change
+- **Concepts**: Exactly 1 conceptual change per session
+
+### Red Flags for Oversized Changes
+- Creating more than 2 files at once
+- Modifying the main module AND creating new classes
+- Adding both new functionality AND refactoring existing code
+- Writing specs for multiple new components simultaneously
+- Making changes that span multiple architectural layers
+
 ### Documentation Requirements
 - All public methods must include comprehensive YARD documentation
 - Include `@param`, `@return`, `@raise`, and `@example` tags where applicable
@@ -110,7 +139,76 @@ event_store.subscribe_to_stream(stream_id, subscription)
 - Comprehensive YARD documentation for all public methods and classes
 - Include examples in YARD docs showing typical usage patterns
 
-## Agent Conversation Tracking
+## Agent Workflow Guidelines
+
+### Incremental Development Approach
+- **One Concept Per Session**: Focus on a single, well-defined change per coding session
+- **Validate Before Proceeding**: Always run tests after each atomic change
+- **Document Progress**: Update chat logs with clear commit boundaries
+- **Ask for Confirmation**: Before large changes, propose the specific steps and get user approval
+
+### Refactoring Session Structure
+1. **Propose the Change**: Clearly describe what will be modified and why
+2. **Break Into Steps**: List specific atomic steps with expected outcomes
+3. **Execute One Step**: Implement only the first step
+4. **Validate**: Run tests to ensure nothing breaks
+5. **Commit**: Create commit with descriptive message
+6. **Repeat**: Move to next step only after validation
+
+### When to Stop and Commit
+- After extracting a single class or module
+- After adding a new feature with its tests
+- After fixing a specific bug or issue
+- When tests all pass and code is working
+- Before making any breaking changes
+- When a logical unit of work is complete
+
+### Agent Guidelines for Large Requests
+
+When a user requests a change that would violate the incremental development guidelines:
+
+1. **Acknowledge the Request**: Confirm understanding of the overall goal
+2. **Propose Breakdown**: Suggest specific atomic steps to achieve the goal
+3. **Explain Benefits**: Briefly explain why smaller steps are better
+4. **Get Approval**: Ask user to confirm the first step before proceeding
+5. **Execute One Step**: Complete only the first atomic change
+6. **Return for Next Step**: After validation, ask for permission to continue
+
+### Example Response Pattern
+```
+I understand you want to [overall goal]. This is a great improvement that will [benefits].
+
+To ensure quality and maintainability, I recommend breaking this into these atomic steps:
+
+1. [First step] - This will [specific outcome]
+2. [Second step] - This will [specific outcome]  
+3. [Third step] - This will [specific outcome]
+
+This approach reduces risk and makes each change easier to review and debug.
+
+Should I proceed with step 1: [specific description]?
+```
+
+### Session Documentation Pattern
+Each agent session should follow this pattern:
+```markdown
+## Session Goal
+Single sentence describing the specific change
+
+## Planned Steps
+1. Step 1 with expected outcome
+2. Step 2 with expected outcome
+3. Step 3 with expected outcome
+
+## Execution
+- [ ] Step 1 completed, tests pass
+- [ ] Step 2 completed, tests pass  
+- [ ] Step 3 completed, tests pass
+- [ ] Final validation, ready for commit
+
+## Commit Message
+"Verb: specific change description"
+```
 - **Session Documentation**: Save all AI pair programming sessions in `/agent_chats/` directory
 - **File Naming**: Create new file for each git commit cycle, with datetime prefix in format `YYYYMMDD-HH.MM_session_theme.md` (e.g., `20250726-12.30_library_refactoring_plan.md`, `20250726-14.15_implementing_stream_management.md`)
 - **Header Format**: Include date with timestamp, agent name with model (e.g., "GitHub Copilot (GPT-4)", "Claude Sonnet 3.5"), and session theme
