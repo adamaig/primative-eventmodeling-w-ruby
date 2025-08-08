@@ -1,6 +1,7 @@
 source 'https://rubygems.org'
 
-gem 'rubocop'
 gem 'debug'
-gem 'rspec'
+gem 'faker'
 gem 'guard-rspec'
+gem 'rspec'
+gem 'rubocop'
