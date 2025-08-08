@@ -34,6 +34,14 @@ The EventStore follows a comprehensive interface pattern with these core method 
 3. **Add Documentation**: Include comprehensive YARD documentation for all public methods
 4. **Validate**: Run full test suite to ensure everything works correctly
 
+### Code Quality Standards
+- **Ruby Style**: Follow established library conventions and RuboCop rules
+- **YARD Documentation**: Comprehensive docs for all public methods and classes  
+- **Error Handling**: Consistent error patterns following library standards
+- **Immutability**: Follow library patterns for immutable objects
+- **Version Control**: Use atomic commits for each spec implementation
+- **Session Boundaries**: Each session should focus on a single conceptual change
+
 ### Refactoring Guidelines
 - **Single Responsibility Per Commit**: Each commit should contain exactly one conceptual change
 - **Atomic Changes**: Complete one logical unit of work before moving to the next
