@@ -17,7 +17,18 @@ describe Scratch do
   include Scratch
 
   let(:store) { EventStore.new }
-  let(:app) { CartApp.new(store) }
+
+  def given_events(events)
+    events.each { |event| store.append(event) }
+  end
+
+  def when_command(aggregate, command)
+    aggregate.handle(command)
+  end
+
+  def then_events(events)
+    expect(store.events).to match(events)
+  end
 
   describe 'Event' do
     describe '#initialize' do
@@ -212,6 +223,30 @@ describe Scratch do
             cart.handle(unknown_command)
           end.to raise_error(RuntimeError, "Unknown command type: #{unknown_command.class}")
         end
+      end
+    end
+
+    describe 'GWTs for Cart' do
+      it 'should create a cart if none is specified when adding an item' do
+        given_events([])
+        when_command(cart, Commands::AddItem.new(nil, item_id))
+        then_events([
+                      be_a(DomainEvents::CartCreated).and(have_attributes(version: 1)),
+                      be_a(DomainEvents::ItemAdded).and(have_attributes(version: 2, data: { item: item_id }))
+                    ])
+      end
+
+      it 'should error if more than 3 items are added' do
+        cart_id = SecureRandom.uuid
+        given_events([
+                       DomainEvents::CartCreated.new(aggregate_id: cart_id),
+                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_id),
+                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_id),
+                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_id)
+                     ])
+        expect do
+          when_command(cart, Commands::AddItem.new(cart_id, item_id))
+        end.to raise_error(InvalidCommandError, /Too many items in cart/)
       end
     end
   end

@@ -116,6 +116,9 @@ module Aggregate
   end
 end
 
+# Error raised for invalid command data
+class InvalidCommandError < StandardError; end
+
 module Aggregates
   class Cart
     # include AggregateLifecyle implementation
@@ -174,7 +177,11 @@ module Aggregates
 
     def handle_add_item_command(command)
       # validate
+      handle_create_cart_command if command.aggregate_id.nil?
       raise 'Cart not initialized' unless @id
+
+      # binding.pry
+      raise InvalidCommandError.new('Too many items in cart') if items.sum(0) { |_item, count| count } >= 3
 
       item_id = command.item_id
       # create event
@@ -185,43 +192,5 @@ module Aggregates
       store.append(event)
       event
     end
-  end
-end
-
-class CartApp
-  attr_reader :store
-
-  def initialize(store)
-    @store = store
-  end
-
-  def handle(command)
-    aggregate = Aggregates::Cart.new
-    aggregate.handle(command)
-  end
-
-  def handle_create_cart_command(command)
-    cart_id = SecureRandom.uuid
-    event = Event.new(type: Event::CartCreated, aggregate_id: cart_id, data: { aggregate_id: cart_id })
-
-    result_event = store.append(event)
-
-    DomainEvents::CartCreated.new(
-      cart_id: cart_id,
-      version: result_event.version,
-      success?: true
-    )
-  end
-
-  def handle_add_item_command(command)
-    event = Event.new(type: Event::ItemAdded, aggregate_id: command.cart_id, data: { item_id: command.item_id })
-
-    result_event = store.append(event)
-
-    DomainEvents::ItemAdded.new(
-      cart_id: command.cart_id,
-      data: { items: [] },
-      success?: true
-    )
   end
 end
