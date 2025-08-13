@@ -260,37 +260,6 @@ describe Scratch do
         end
       end
 
-      it 'should read the cart items' do
-        cart_id = SecureRandom.uuid
-
-        given_events([
-                       DomainEvents::CartCreated.new(aggregate_id: cart_id),
-                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id),
-                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_2_id),
-                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_1_id)
-                     ])
-
-        then_query_result(
-          Query::CartItemsRead.new(cart_id, store),
-          {
-            cart: {
-              cart_id: cart_id,
-              totals: {
-                total: 0.0
-              },
-              items: {
-                item_1_id => {
-                  quantity: 2
-                },
-                item_2_id => {
-                  quantity: 1
-                }
-              }
-            }
-          }
-        )
-      end
-
       describe 'Removing Items from a Cart' do
         it 'should support removing items' do
           cart_id = SecureRandom.uuid
@@ -330,6 +299,93 @@ describe Scratch do
           when_command(cart, Commands::RemoveItem.new(cart_id, item_2_id))
         end.to raise_error(InvalidCommandError, /Item #{item_2_id} is not in the cart/)
       end
+    end
+  end
+
+  describe 'Query::CartItemRead' do
+    let(:cart_id) { SecureRandom.uuid }
+    let(:item_1_id) { 'item-456' }
+    let(:item_2_id) { 'item-789' }
+
+    it 'should be the basic projection when the cart is created' do
+      given_events([
+                     DomainEvents::CartCreated.new(aggregate_id: cart_id)
+                   ])
+      then_query_result(
+        Query::CartItemsRead.new(cart_id, store),
+        {
+          cart: {
+            cart_id: cart_id,
+            items: {},
+            totals: {
+              total: 0.0
+            }
+          }
+        }
+      )
+    end
+
+    it 'should read the cart items' do
+      cart_id = SecureRandom.uuid
+
+      given_events([
+                     DomainEvents::CartCreated.new(aggregate_id: cart_id),
+                     DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id),
+                     DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_2_id),
+                     DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_1_id)
+                   ])
+
+      then_query_result(
+        Query::CartItemsRead.new(cart_id, store),
+        {
+          cart: {
+            cart_id: cart_id,
+            totals: {
+              total: 0.0
+            },
+            items: {
+              item_1_id => {
+                quantity: 2
+              },
+              item_2_id => {
+                quantity: 1
+              }
+            }
+          }
+        }
+      )
+    end
+
+    it 'should project the expected quantity and cost of items in the cart' do
+      given_events([
+                     DomainEvents::CartCreated.new(aggregate_id: cart_id),
+                     DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id),
+                     DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_2_id),
+                     DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_1_id),
+                     DomainEvents::ItemRemoved.new(aggregate_id: cart_id, version: 5, item_id: item_1_id),
+                     DomainEvents::ItemRemoved.new(aggregate_id: cart_id, version: 6, item_id: item_2_id)
+                   ])
+      then_query_result(
+        Query::CartItemsRead.new(cart_id, store),
+        {
+          cart: {
+            cart_id: cart_id,
+            totals: {
+              total: 0.0
+            },
+            items: {
+              item_1_id => { quantity: 1 }
+            }
+          }
+        }
+      )
+    end
+
+
+    xit 'should remove items' do
+    end
+
+    xit 'should clear the cart' do
     end
   end
 end
