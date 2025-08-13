@@ -30,6 +30,10 @@ describe Scratch do
     expect(store.events).to match(events)
   end
 
+  def then_events_include(events)
+    expect(store.events).to include(events)
+  end
+
   def then_query_result(query, result)
     expect(query.execute).to match(result)
   end
@@ -283,6 +287,33 @@ describe Scratch do
             }
           }
         )
+      end
+
+      it 'should support removing items' do
+        cart_id = SecureRandom.uuid
+        given_events([
+                       DomainEvents::CartCreated.new(aggregate_id: cart_id),
+                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id),
+                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_2_id),
+                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_1_id)
+                     ])
+        when_command(cart, Commands::RemoveItem.new(cart_id, item_1_id))
+        then_events_include(
+          be_a(DomainEvents::ItemRemoved).and(have_attributes(version: 5, data: { item: item_1_id }))
+        )
+      end
+
+      it 'should error when attempting to remove an item that is not in the cart' do
+        cart_id = SecureRandom.uuid
+        given_events([
+                       DomainEvents::CartCreated.new(aggregate_id: cart_id),
+                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id),
+                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_1_id),
+                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_1_id)
+                     ])
+        expect do
+          when_command(cart, Commands::RemoveItem.new(cart_id, item_2_id))
+        end.to raise_error(InvalidCommandError, /Item #{item_2_id} is not in the cart/)
       end
     end
   end

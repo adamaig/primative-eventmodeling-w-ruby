@@ -70,10 +70,17 @@ class DomainEvents::ItemAdded < Event
   end
 end
 
+class DomainEvents::ItemRemoved < Event
+  def initialize(aggregate_id:, version:, item_id:)
+    super(type: self.class, aggregate_id: aggregate_id, version: version, data: { item: item_id })
+  end
+end
+
 module Commands
   Unknown = Struct.new(:aggregate_id)
   CreateCart = Struct.new(:aggregate_id)
   AddItem = Struct.new(:aggregate_id, :item_id)
+  RemoveItem = Struct.new(:aggregate_id, :item_id)
 end
 
 module Aggregate
@@ -182,6 +189,8 @@ module Aggregates
         handle_create_cart_command
       when Commands::AddItem
         handle_add_item_command(command)
+      when Commands::RemoveItem
+        handle_remove_item_command(command)
       else
         raise "Unknown command type: #{command.class}"
       end
@@ -223,12 +232,28 @@ module Aggregates
       handle_create_cart_command if command.aggregate_id.nil?
       raise 'Cart not initialized' unless @id
 
-      # binding.pry
       raise InvalidCommandError.new('Too many items in cart') if items.sum(0) { |_item, count| count } >= 3
 
       item_id = command.item_id
       # create event
       event = DomainEvents::ItemAdded.new(aggregate_id: @id, version: @version + 1, item_id: item_id)
+      # update aggregate state
+      on(event)
+      # update stream
+      store.append(event)
+      event
+    end
+
+    def handle_remove_item_command(command)
+      # validate
+      raise 'Cart not initialized' unless @id
+
+      item_id = command.item_id
+
+      raise InvalidCommandError.new("Item #{item_id} is not in the cart") unless items.include?(item_id)
+
+      # create event
+      event = DomainEvents::ItemRemoved.new(aggregate_id: @id, version: @version + 1, item_id: item_id)
       # update aggregate state
       on(event)
       # update stream
