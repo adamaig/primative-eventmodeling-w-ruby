@@ -236,26 +236,28 @@ describe Scratch do
     end
 
     describe 'GWTs for Cart' do
-      it 'should create a cart if none is specified when adding an item' do
-        given_events([])
-        when_command(cart, Commands::AddItem.new(nil, item_1_id))
-        then_events([
-                      be_a(DomainEvents::CartCreated).and(have_attributes(version: 1)),
-                      be_a(DomainEvents::ItemAdded).and(have_attributes(version: 2, data: { item: item_1_id }))
-                    ])
-      end
+      describe 'Adding items to a cart' do
+        it 'should create a cart if none is specified when adding an item' do
+          given_events([])
+          when_command(cart, Commands::AddItem.new(nil, item_1_id))
+          then_events([
+                        be_a(DomainEvents::CartCreated).and(have_attributes(version: 1)),
+                        be_a(DomainEvents::ItemAdded).and(have_attributes(version: 2, data: { item: item_1_id }))
+                      ])
+        end
 
-      it 'should error if more than 3 items are added' do
-        cart_id = SecureRandom.uuid
-        given_events([
-                       DomainEvents::CartCreated.new(aggregate_id: cart_id),
-                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id),
-                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_1_id),
-                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_1_id)
-                     ])
-        expect do
-          when_command(cart, Commands::AddItem.new(cart_id, item_1_id))
-        end.to raise_error(InvalidCommandError, /Too many items in cart/)
+        it 'should error if more than 3 items are added' do
+          cart_id = SecureRandom.uuid
+          given_events([
+                         DomainEvents::CartCreated.new(aggregate_id: cart_id),
+                         DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id),
+                         DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_1_id),
+                         DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_1_id)
+                       ])
+          expect do
+            when_command(cart, Commands::AddItem.new(cart_id, item_1_id))
+          end.to raise_error(InvalidCommandError, /Too many items in cart/)
+        end
       end
 
       it 'should read the cart items' do
@@ -289,20 +291,33 @@ describe Scratch do
         )
       end
 
-      it 'should support removing items' do
-        cart_id = SecureRandom.uuid
-        given_events([
-                       DomainEvents::CartCreated.new(aggregate_id: cart_id),
-                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id),
-                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_2_id),
-                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_1_id)
-                     ])
-        when_command(cart, Commands::RemoveItem.new(cart_id, item_1_id))
-        then_events_include(
-          be_a(DomainEvents::ItemRemoved).and(have_attributes(version: 5, data: { item: item_1_id }))
-        )
-      end
+      describe 'Removing Items from a Cart' do
+        it 'should support removing items' do
+          cart_id = SecureRandom.uuid
+          given_events([
+                         DomainEvents::CartCreated.new(aggregate_id: cart_id),
+                         DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id),
+                         DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_2_id),
+                         DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_1_id)
+                       ])
+          when_command(cart, Commands::RemoveItem.new(cart_id, item_1_id))
+          then_events_include(
+            be_a(DomainEvents::ItemRemoved).and(have_attributes(version: 5, data: { item: item_1_id }))
+          )
+        end
 
+        it 'should error when attempting to remove an item that is not in the cart' do
+          cart_id = SecureRandom.uuid
+          given_events([
+                         DomainEvents::CartCreated.new(aggregate_id: cart_id),
+                         DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id),
+                         DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_1_id),
+                         DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_1_id)
+                       ])
+          expect do
+            when_command(cart, Commands::RemoveItem.new(cart_id, item_2_id))
+          end.to raise_error(InvalidCommandError, /Item #{item_2_id} is not in the cart/)
+        end
       it 'should error when attempting to remove an item that is not in the cart' do
         cart_id = SecureRandom.uuid
         given_events([
