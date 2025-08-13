@@ -119,6 +119,49 @@ end
 # Error raised for invalid command data
 class InvalidCommandError < StandardError; end
 
+module Query
+  class CartItemsRead
+    attr_accessor :aggregate_id, :store, :projection
+
+    def initialize(aggregate_id, store)
+      @aggregate_id = aggregate_id
+      @store = store
+      @projection = {}
+    end
+
+    def execute
+      events = store.get_stream(aggregate_id)
+      events.each do |event|
+        on(event)
+      end
+      { cart: @projection }
+    end
+
+    def on(event)
+      case event
+      when DomainEvents::CartCreated
+        on_cart_created(event)
+      when DomainEvents::ItemAdded
+        on_add_item(event)
+      end
+    end
+
+    def on_cart_created(event)
+      @projection[:cart_id] = event.aggregate_id
+      @projection[:totals] = {
+        total: 0.0
+      }
+    end
+
+    def on_add_item(event)
+      @projection[:items] ||= {}
+      item_id = event.data[:item]
+      @projection[:items][item_id] ||= { quantity: 0 }
+      @projection[:items][item_id][:quantity] += 1
+    end
+  end
+end
+
 module Aggregates
   class Cart
     # include AggregateLifecyle implementation

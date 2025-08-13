@@ -30,6 +30,10 @@ describe Scratch do
     expect(store.events).to match(events)
   end
 
+  def then_query_result(query, result)
+    expect(query.execute).to match(result)
+  end
+
   describe 'Event' do
     describe '#initialize' do
       it 'should have an id, type, payload, metadata, and timestamp' do
@@ -154,9 +158,10 @@ describe Scratch do
     let(:store) { EventStore.new }
     let(:cart) { Aggregates::Cart.new(store) }
     let(:cart_id) { 'cart-123' }
-    let(:item_id) { 'item-456' }
+    let(:item_1_id) { 'item-456' }
+    let(:item_2_id) { 'item-789' }
     let(:create_cart_event) { DomainEvents::CartCreated.new(aggregate_id: cart_id) }
-    let(:add_item_event) { DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_id) }
+    let(:add_item_event) { DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id) }
 
     it 'should include Aggregate module' do
       expect(cart).to be_a(Aggregate)
@@ -175,7 +180,7 @@ describe Scratch do
       end
       it 'should handle ItemAdded' do
         cart.on(add_item_event)
-        expect(cart.items).to include(item_id)
+        expect(cart.items).to include(item_1_id)
       end
     end
 
@@ -187,7 +192,7 @@ describe Scratch do
       it 'should replay all events for the given cart' do
         cart.hydrate(id: cart_id)
         expect(cart.id).to eq(cart_id)
-        expect(cart.items).to eq({ item_id => 1 }) # Assuming one item added
+        expect(cart.items).to eq({ item_1_id => 1 }) # Assuming one item added
         expect(cart.version).to eq(store.get_stream_version(cart.id))
       end
     end
@@ -205,13 +210,13 @@ describe Scratch do
       end
 
       context 'when handling AddItem command' do
-        let(:command) { Commands::AddItem.new(aggregate_id: cart_id, item_id: item_id) }
+        let(:command) { Commands::AddItem.new(aggregate_id: cart_id, item_id: item_1_id) }
 
         it 'should add an item to the cart' do
           store.append(create_cart_event) # Ensure cart exists
           result = cart.handle(command)
           expect(result).to be_a(DomainEvents::ItemAdded)
-          expect(cart.items[item_id]).to eq(1)
+          expect(cart.items[item_1_id]).to eq(1)
         end
       end
 
@@ -229,10 +234,10 @@ describe Scratch do
     describe 'GWTs for Cart' do
       it 'should create a cart if none is specified when adding an item' do
         given_events([])
-        when_command(cart, Commands::AddItem.new(nil, item_id))
+        when_command(cart, Commands::AddItem.new(nil, item_1_id))
         then_events([
                       be_a(DomainEvents::CartCreated).and(have_attributes(version: 1)),
-                      be_a(DomainEvents::ItemAdded).and(have_attributes(version: 2, data: { item: item_id }))
+                      be_a(DomainEvents::ItemAdded).and(have_attributes(version: 2, data: { item: item_1_id }))
                     ])
       end
 
@@ -240,13 +245,44 @@ describe Scratch do
         cart_id = SecureRandom.uuid
         given_events([
                        DomainEvents::CartCreated.new(aggregate_id: cart_id),
-                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_id),
-                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_id),
-                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_id)
+                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id),
+                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_1_id),
+                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_1_id)
                      ])
         expect do
-          when_command(cart, Commands::AddItem.new(cart_id, item_id))
+          when_command(cart, Commands::AddItem.new(cart_id, item_1_id))
         end.to raise_error(InvalidCommandError, /Too many items in cart/)
+      end
+
+      it 'should read the cart items' do
+        cart_id = SecureRandom.uuid
+
+        given_events([
+                       DomainEvents::CartCreated.new(aggregate_id: cart_id),
+                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id),
+                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_2_id),
+                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_1_id)
+                     ])
+
+        then_query_result(
+          Query::CartItemsRead.new(cart_id, store),
+          {
+            cart: {
+              cart_id: cart_id,
+              totals: {
+                total: 0.0
+              },
+              items: {
+                item_1_id => {
+                  quantity: 2
+                },
+                item_2_id => {
+                  quantity: 1
+                }
+              }
+            }
+          }
+        )
       end
     end
   end
