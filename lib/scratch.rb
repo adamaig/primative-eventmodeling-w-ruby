@@ -157,6 +157,10 @@ module Query
         on_cart_created(event)
       when DomainEvents::ItemAdded
         on_add_item(event)
+      when DomainEvents::ItemRemoved
+        on_item_removed(event)
+      else
+        raise "Unhandled event type: #{event.class}"
       end
     end
 
@@ -172,6 +176,15 @@ module Query
       item_id = event.data[:item]
       @projection[:items][item_id] ||= { quantity: 0 }
       @projection[:items][item_id][:quantity] += 1
+    end
+
+    def on_item_removed(event)
+      item_id = event.data[:item]
+      return unless projection[:items].has_key?(item_id)
+
+      projection[:items][item_id][:quantity] -= 1
+
+      projection[:items].delete(item_id) if projection[:items][item_id][:quantity] < 1
     end
   end
 end
@@ -227,6 +240,11 @@ module Aggregates
       @items[event.data[:item]] ||= 0
       @items[event.data[:item]] += 1
     end
+
+    def on_remove_item(event)
+      raise 'handle me'
+    end
+
     def on_cart_cleared(event)
       @items = []
     end
