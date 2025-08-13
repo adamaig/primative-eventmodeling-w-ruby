@@ -237,6 +237,19 @@ describe Scratch do
 
     describe 'GWTs for Cart' do
       describe 'Adding items to a cart' do
+        it 'should add an item to the cart' do
+          cart_id = SecureRandom.uuid
+          given_events([
+                         DomainEvents::CartCreated.new(aggregate_id: cart_id)
+                       ])
+          when_command(cart, Commands::AddItem.new(cart_id, item_1_id))
+          then_events([
+                        be_a(DomainEvents::CartCreated).and(have_attributes(version: 1)),
+                        be_a(DomainEvents::ItemAdded).and(have_attributes(version: 2,
+                                                                          data: { item: item_1_id }))
+                      ])
+        end
+
         it 'should create a cart if none is specified when adding an item' do
           given_events([])
           when_command(cart, Commands::AddItem.new(nil, item_1_id))
