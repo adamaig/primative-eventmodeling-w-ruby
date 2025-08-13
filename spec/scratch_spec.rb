@@ -287,17 +287,22 @@ describe Scratch do
             when_command(cart, Commands::RemoveItem.new(cart_id, item_2_id))
           end.to raise_error(InvalidCommandError, /Item #{item_2_id} is not in the cart/)
         end
-      it 'should error when attempting to remove an item that is not in the cart' do
-        cart_id = SecureRandom.uuid
-        given_events([
-                       DomainEvents::CartCreated.new(aggregate_id: cart_id),
-                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id),
-                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_1_id),
-                       DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_1_id)
-                     ])
-        expect do
-          when_command(cart, Commands::RemoveItem.new(cart_id, item_2_id))
-        end.to raise_error(InvalidCommandError, /Item #{item_2_id} is not in the cart/)
+      end
+
+      describe 'Clearing the cart' do
+        it 'should support clearing the cart' do
+          cart_id = SecureRandom.uuid
+          given_events([
+                         DomainEvents::CartCreated.new(aggregate_id: cart_id),
+                         DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id),
+                         DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_2_id),
+                         DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_1_id)
+                       ])
+          when_command(cart, Commands::ClearCart.new(cart_id))
+          then_events_include(
+            be_a(DomainEvents::CartCleared).and(have_attributes(version: 5, data: {}))
+          )
+        end
       end
     end
   end
@@ -381,6 +386,27 @@ describe Scratch do
       )
     end
 
+    it 'should have an empty item list when cleared' do
+      given_events([
+                     DomainEvents::CartCreated.new(aggregate_id: cart_id),
+                     DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id),
+                     DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_2_id),
+                     DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_1_id),
+                     DomainEvents::CartCleared.new(aggregate_id: cart_id, version: 5)
+                   ])
+      then_query_result(
+        Query::CartItemsRead.new(cart_id, store),
+        {
+          cart: {
+            cart_id: cart_id,
+            totals: {
+              total: 0.0
+            },
+            items: {}
+          }
+        }
+      )
+    end
 
     xit 'should remove items' do
     end

@@ -76,11 +76,18 @@ class DomainEvents::ItemRemoved < Event
   end
 end
 
+class DomainEvents::CartCleared < Event
+  def initialize(aggregate_id:, version:)
+    super(type: self.class, aggregate_id: aggregate_id, version: version)
+  end
+end
+
 module Commands
   Unknown = Struct.new(:aggregate_id)
   CreateCart = Struct.new(:aggregate_id)
   AddItem = Struct.new(:aggregate_id, :item_id)
   RemoveItem = Struct.new(:aggregate_id, :item_id)
+  ClearCart = Struct.new(:aggregate_id)
 end
 
 module Aggregate
@@ -191,6 +198,8 @@ module Aggregates
         handle_add_item_command(command)
       when Commands::RemoveItem
         handle_remove_item_command(command)
+      when Commands::ClearCart
+        handle_clear_cart_command(command)
       else
         raise "Unknown command type: #{command.class}"
       end
@@ -202,6 +211,10 @@ module Aggregates
         on_cart_created(event)
       when DomainEvents::ItemAdded
         on_add_item(event)
+      when DomainEvents::CartCleared
+        on_cart_cleared(event)
+      else
+        raise "Unhandled event type: #{event.class}"
       end
       @version = event.version
     end
@@ -213,6 +226,9 @@ module Aggregates
     def on_add_item(event)
       @items[event.data[:item]] ||= 0
       @items[event.data[:item]] += 1
+    end
+    def on_cart_cleared(event)
+      @items = []
     end
 
     def handle_create_cart_command
@@ -254,6 +270,19 @@ module Aggregates
 
       # create event
       event = DomainEvents::ItemRemoved.new(aggregate_id: @id, version: @version + 1, item_id: item_id)
+      # update aggregate state
+      on(event)
+      # update stream
+      store.append(event)
+      event
+    end
+
+    def handle_clear_cart_command(command)
+      # validate
+      raise 'Cart not initialized' unless @id
+
+      # create event
+      event = DomainEvents::CartCleared.new(aggregate_id: @id, version: @version + 1)
       # update aggregate state
       on(event)
       # update stream
