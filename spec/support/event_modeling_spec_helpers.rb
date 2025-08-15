@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-module CartSpecHelpers
+module EventModelingSpecHelpers
   def given_events(events)
     events.each { |event| store.append(event) }
   end

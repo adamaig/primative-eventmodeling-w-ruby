@@ -1,10 +1,8 @@
 # frozen_string_literal: true
 
 require 'spec_helper'
-require_relative '../../../spec/support/cart_spec_helpers'
 
 RSpec.describe 'Cart GWT Slices' do
-  include CartSpecHelpers
   # Shortened namespace for cart events and commands
   let(:cart_event) { SimpleEventModeling::Cart::DomainEvents }
   let(:cart_command) { SimpleEventModeling::Cart::Commands }
