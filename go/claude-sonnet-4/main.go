@@ -61,8 +61,25 @@ func main() {
 	fmt.Printf("   Cart version: %d\n", cartAggregate.Version())
 	fmt.Println()
 
+	// Demonstrate CQRS with Query projection
+	fmt.Println("4. CQRS Query Projection (Read Model):")
+	query := cart.NewCartItemsQuery(cartAggregate.ID(), store)
+	projection, err := query.Execute()
+	if err != nil {
+		log.Fatal("Error executing query:", err)
+	}
+	fmt.Printf("   Cart ID: %s\n", projection.CartID)
+	fmt.Printf("   Items in projection:\n")
+	for itemID, itemView := range projection.Items {
+		fmt.Printf("     %s: quantity=%d, price=%.2f, total=%.2f\n",
+			itemID, itemView.Quantity, itemView.Price, itemView.Total)
+	}
+	fmt.Printf("   Totals: count=%d, amount=%.2f\n",
+		projection.Totals.ItemCount, projection.Totals.TotalAmount)
+	fmt.Println()
+
 	// Try to add too many items (should fail)
-	fmt.Println("4. Trying to exceed cart limit...")
+	fmt.Println("5. Trying to exceed cart limit...")
 	addCmd3 := &cart.AddItemCommand{
 		AggregateID: event.AggregateID,
 		ItemID:      "item-3",
@@ -84,7 +101,7 @@ func main() {
 	fmt.Println()
 
 	// Remove an item
-	fmt.Println("5. Removing an item...")
+	fmt.Println("6. Removing an item...")
 	removeCmd := &cart.RemoveItemCommand{
 		AggregateID: event.AggregateID,
 		ItemID:      "item-2",
@@ -96,17 +113,29 @@ func main() {
 	fmt.Printf("   Removed item-2 (version %d)\n", event.Version)
 	fmt.Println()
 
-	// Show final cart state
-	fmt.Println("6. Final cart state:")
+	// Show final cart state vs query projection
+	fmt.Println("7. Final state comparison:")
+	fmt.Println("   Aggregate state (write model):")
 	items = cartAggregate.Items()
 	for itemID, quantity := range items {
-		fmt.Printf("   %s: %d\n", itemID, quantity)
+		fmt.Printf("     %s: %d\n", itemID, quantity)
 	}
 	fmt.Printf("   Cart version: %d\n", cartAggregate.Version())
+
+	fmt.Println("   Query projection (read model):")
+	projection, err = query.Execute()
+	if err != nil {
+		log.Fatal("Error executing query:", err)
+	}
+	for itemID, itemView := range projection.Items {
+		fmt.Printf("     %s: quantity=%d, total=%.2f\n",
+			itemID, itemView.Quantity, itemView.Total)
+	}
+	fmt.Printf("   Computed totals: count=%d\n", projection.Totals.ItemCount)
 	fmt.Println()
 
 	// Demonstrate event replay by creating a new aggregate and hydrating it
-	fmt.Println("7. Demonstrating event replay...")
+	fmt.Println("8. Demonstrating event replay...")
 	newCartAggregate := cart.NewCartAggregate(store)
 	err = newCartAggregate.Hydrate(cartAggregate.ID())
 	if err != nil {
@@ -122,7 +151,7 @@ func main() {
 	fmt.Println()
 
 	// Show all events in the store
-	fmt.Println("8. All events in store:")
+	fmt.Println("9. All events in store:")
 	events, err := store.GetStream(cartAggregate.ID())
 	if err != nil {
 		log.Fatal("Error getting events:", err)

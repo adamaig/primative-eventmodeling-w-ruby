@@ -24,6 +24,7 @@ The library is organized with clear separation of concerns, with each major conc
 - **`commands.go`**: Command types (CreateCart, AddItem, RemoveItem, ClearCart)
 - **`events.go`**: Event factory functions and constants
 - **`aggregate.go`**: CartAggregate implementation with business logic
+- **`cart_items_query.go`**: CartItemsQuery for CQRS read models and projections
 
 ### Core Components
 
@@ -152,7 +153,9 @@ go/claude-sonnet-4/
 │   ├── commands.go           # Command types
 │   ├── events.go             # Event factory functions
 │   ├── aggregate.go          # CartAggregate implementation
+│   ├── cart_items_query.go   # CartItemsQuery for read models
 │   ├── cart_test.go          # Domain tests
+│   ├── cart_items_query_test.go # Query tests
 │   └── cart_bench_test.go    # Performance benchmarks
 └── examples/
     └── advanced_demo.go      # Advanced usage examples
@@ -178,6 +181,7 @@ go/claude-sonnet-4/
 - Commands modify state (write side)
 - Queries read current state (read side)
 - Clear separation of concerns
+- Read models optimized for specific query needs
 
 ### Domain-Driven Design
 - Rich domain model with business rules
@@ -189,6 +193,27 @@ go/claude-sonnet-4/
 - Cannot remove items not in cart
 - Proper command validation
 
+### Query Implementation (CQRS Read Side)
+- **Projections**: Transform events into read-optimized data structures
+- **Computed Fields**: Calculate derived values like totals and counts
+- **Flexible Filtering**: Include/exclude data based on query parameters
+- **Performance Optimized**: Separate read models for specific use cases
+
+Example query usage:
+```go
+// Query all cart items with totals
+query := CartItemsQuery{
+    IncludeEmptyItems: false,
+    CalculateTotals:   true,
+}
+
+events, _ := store.GetStream(cartID)
+result, err := query.Execute(events)
+
+fmt.Printf("Total: $%.2f\n", float64(result.TotalPrice)/100)
+fmt.Printf("Items: %d\n", len(result.Items))
+```
+
 ## Comparison with Ruby Implementation
 
 This Go implementation maintains the same conceptual structure as the Ruby version:
@@ -199,6 +224,7 @@ This Go implementation maintains the same conceptual structure as the Ruby versi
 | Events | Classes inheriting from `Event` | Factory functions returning `*Event` |
 | Aggregates | Modules with `include Aggregate` | Structs embedding `*BaseAggregate` |
 | Event Store | Class with hash storage | Struct with map storage |
+| Queries | Classes with `execute` method | Structs with `Execute` method |
 | Error Handling | Custom exception classes | Custom error types |
 
 The Go version emphasizes:
@@ -213,15 +239,16 @@ Comprehensive tests cover all aspects of the library:
 
 ### Test Coverage by Package
 - **Common Package**: Event creation, EventStore functionality, BaseAggregate lifecycle
-- **Cart Package**: Command handling, business rules, event replay, error conditions
+- **Cart Package**: Command handling, business rules, event replay, query execution, error conditions
 - **Integration Tests**: End-to-end workflows and state transitions
 - **Performance Tests**: Benchmarks for command processing and event replay
 
 ### Test Organization
 ```
-common/common_test.go    # Framework component tests
-cart/cart_test.go        # Domain logic and business rule tests  
-cart/cart_bench_test.go  # Performance benchmarks
+common/common_test.go              # Framework component tests
+cart/cart_test.go                  # Domain logic and business rule tests  
+cart/cart_items_query_test.go      # Query execution and projection tests
+cart/cart_bench_test.go            # Performance benchmarks
 ```
 
 ### Running Tests
