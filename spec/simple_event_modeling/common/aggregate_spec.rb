@@ -55,7 +55,7 @@ RSpec.describe SimpleEventModeling::Common::Aggregate do
 
     it 'should not fail hydration if the stream does not exist' do
       allow(store).to receive(:get_stream)
-        .and_raise(SimpleEventModeling::Common::Errors::StreamNotFound,
+        .and_raise(SimpleEventModeling::Common::Errors::StreamNotFoundError,
                    "Stream #{aggregate_id} not found")
 
       expect { aggregate.hydrate(id: aggregate_id) }

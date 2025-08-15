@@ -32,7 +32,7 @@ module SimpleEventModeling
       end
 
       def get_stream(aggregate_id)
-        raise Errors::StreamNotFound, aggregate_id unless streams.key?(aggregate_id)
+        raise Errors::StreamNotFoundError, aggregate_id unless streams.key?(aggregate_id)
 
         streams[aggregate_id] || []
       end

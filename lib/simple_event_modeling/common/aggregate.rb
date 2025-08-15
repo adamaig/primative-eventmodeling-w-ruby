@@ -46,7 +46,7 @@ module SimpleEventModeling
           events.each do |event|
             on(event)
           end
-        rescue Errors::StreamNotFound => _e
+        rescue Errors::StreamNotFoundError => _e
           # Log the error or handle it as needed
         end
         @live = true

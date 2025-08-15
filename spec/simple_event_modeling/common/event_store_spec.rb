@@ -38,7 +38,7 @@ RSpec.describe SimpleEventModeling::Common::EventStore do
     it 'should raise an error for a non-existent stream' do
       expect do
         store.get_stream('non_existent')
-      end.to raise_error(SimpleEventModeling::Common::Errors::StreamNotFound, /Stream non_existent not found/)
+      end.to raise_error(SimpleEventModeling::Common::Errors::StreamNotFoundError, /Stream non_existent not found/)
     end
     it 'should return the correct stream for an existing aggregate_id' do
       store.append(event)
@@ -63,7 +63,7 @@ RSpec.describe SimpleEventModeling::Common::EventStore do
     it 'should raise an error for a non-existent stream' do
       expect do
         store.get_stream('non_existent')
-      end.to raise_error(SimpleEventModeling::Common::Errors::StreamNotFound, /Stream non_existent not found/)
+      end.to raise_error(SimpleEventModeling::Common::Errors::StreamNotFoundError, /Stream non_existent not found/)
     end
   end
 end

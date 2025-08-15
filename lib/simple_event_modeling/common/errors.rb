@@ -7,7 +7,7 @@ module SimpleEventModeling
       class InvalidCommandError < StandardError; end
 
       # Error raised when a stream is not found
-      class StreamNotFound < StandardError
+      class StreamNotFoundError < StandardError
         def initialize(stream_id)
           super("Stream #{stream_id} not found")
         end
