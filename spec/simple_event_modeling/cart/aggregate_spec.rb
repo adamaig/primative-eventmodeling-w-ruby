@@ -73,7 +73,7 @@ RSpec.describe SimpleEventModeling::Cart::Aggregate do # rubocop:disable Metrics
     end
 
     context 'when handling an unknown command type' do
-      let(:unknown_command) { cart_command::Unknown.new(aggregate_id: nil) }
+      let(:unknown_command) { Struct.new(:aggregate_id).new(aggregate_id: nil) }
 
       it 'should raise an error' do
         expect do
