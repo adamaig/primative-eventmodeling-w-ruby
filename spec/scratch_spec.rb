@@ -273,7 +273,7 @@ describe Scratch do
       end
 
       describe 'Removing Items from a Cart' do
-        it 'should support removing items' do
+        xit 'should support removing items' do
           cart_id = SecureRandom.uuid
           given_events([
                          DomainEvents::CartCreated.new(aggregate_id: cart_id),

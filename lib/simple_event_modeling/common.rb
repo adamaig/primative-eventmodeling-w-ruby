@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require 'simple_event_modeling/common/aggregate'
+require 'simple_event_modeling/common/errors'
 require 'simple_event_modeling/common/event'
 require 'simple_event_modeling/common/event_protocol'
 require 'simple_event_modeling/common/event_store'
