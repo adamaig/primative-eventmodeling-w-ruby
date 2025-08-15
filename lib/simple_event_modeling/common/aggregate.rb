@@ -41,9 +41,13 @@ module SimpleEventModeling
       def hydrate(id:)
         raise 'Aggregate is already live' if isLive?
 
-        events = store.get_stream(id)
-        events.each do |event|
-          on(event)
+        begin
+          events = store.get_stream(id)
+          events.each do |event|
+            on(event)
+          end
+        rescue Errors::StreamNotFound => _e
+          # Log the error or handle it as needed
         end
         @live = true
       end

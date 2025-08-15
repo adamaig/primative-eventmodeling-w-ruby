@@ -52,5 +52,14 @@ RSpec.describe SimpleEventModeling::Common::Aggregate do
       aggregate.hydrate(id: aggregate_id)
       expect { aggregate.hydrate(id: aggregate_id) }.to raise_error(RuntimeError, 'Aggregate is already live')
     end
+
+    it 'should not fail hydration if the stream does not exist' do
+      allow(store).to receive(:get_stream)
+        .and_raise(SimpleEventModeling::Common::Errors::StreamNotFound,
+                   "Stream #{aggregate_id} not found")
+
+      expect { aggregate.hydrate(id: aggregate_id) }
+        .to change { aggregate.isLive? }.from(false).to(true)
+    end
   end
 end
