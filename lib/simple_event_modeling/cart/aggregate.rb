@@ -39,6 +39,8 @@ module SimpleEventModeling
           on_add_item(event)
         when DomainEvents::CartCleared
           on_cart_cleared(event)
+        when DomainEvents::ItemRemoved
+          on_remove_item(event)
         else
           raise "Unhandled event type: #{event.class}"
         end
@@ -55,7 +57,8 @@ module SimpleEventModeling
       end
 
       def on_remove_item(event)
-        raise 'handle me'
+        @items[event.data[:item]] -= 1 if @items[event.data[:item]]
+        @items.delete(event.data[:item]) if @items[event.data[:item]].zero?
       end
 
       def on_cart_cleared(event)

@@ -72,6 +72,36 @@ RSpec.describe SimpleEventModeling::Cart::Aggregate do # rubocop:disable Metrics
       end
     end
 
+    context 'when handling RemoveItem command' do
+      let(:command) { cart_command::RemoveItem.new(aggregate_id: cart_id, item_id: item_1_id) }
+
+      before do
+        store.append(create_cart_event)
+        store.append(add_item_event)
+      end
+
+      it 'should remove an item from the cart if the quantity is > 0' do
+        store.append(add_item_event)
+        result = cart.handle(command)
+        expect(result).to be_a(cart_event::ItemRemoved)
+        expect(cart.items[item_1_id]).to eq(1)
+      end
+
+      it 'should remove an item from the cart if the quantity is 0' do
+        result = cart.handle(command)
+        expect(result).to be_a(cart_event::ItemRemoved)
+        expect(cart.items[item_1_id]).to eq(nil)
+      end
+
+      it 'should not raise an error if the item does not exist' do
+        command = cart_command::RemoveItem.new(aggregate_id: cart_id, item_id: 'nonexistent-item')
+        expect do
+          cart.handle(command)
+        end.to raise_error(SimpleEventModeling::Common::Errors::InvalidCommandError,
+                           /Item nonexistent-item is not in the cart/)
+      end
+    end
+
     context 'when handling an unknown command type' do
       let(:unknown_command) { Struct.new(:aggregate_id).new(aggregate_id: nil) }
 
@@ -82,6 +112,4 @@ RSpec.describe SimpleEventModeling::Cart::Aggregate do # rubocop:disable Metrics
       end
     end
   end
-
-  # Additional GWTs and edge cases can be added here as needed.
 end

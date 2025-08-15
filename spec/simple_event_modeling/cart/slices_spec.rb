@@ -55,35 +55,38 @@ RSpec.describe 'Cart GWT Slices' do
   end
 
   describe 'Removing Items from a Cart' do
-    xit 'should support removing items' do
-      cart_id = SecureRandom.uuid
+    let(:cart_id) { SecureRandom.uuid }
+    before do
       given_events([
                      cart_event::CartCreated.new(aggregate_id: cart_id),
                      cart_event::ItemAdded.new(aggregate_id: cart_id, version: 2,
                                                item_id: item_1_id),
                      cart_event::ItemAdded.new(aggregate_id: cart_id, version: 3,
-                                               item_id: item_2_id),
-                     cart_event::ItemAdded.new(aggregate_id: cart_id, version: 4,
                                                item_id: item_1_id)
                    ])
+    end
+
+    it 'should support reduce the quantity of items' do
       when_command(cart, cart_command::RemoveItem.new(cart_id, item_1_id))
       then_events_include(
-        be_a(cart_event::ItemRemoved).and(have_attributes(version: 5,
+        be_a(cart_event::ItemRemoved).and(have_attributes(version: 4,
                                                           data: { item: item_1_id }))
       )
     end
 
-    it 'should error when attempting to remove an item that is not in the cart' do
-      cart_id = SecureRandom.uuid
+    it 'should remove the item if quantity reaches zero' do
       given_events([
-                     cart_event::CartCreated.new(aggregate_id: cart_id),
-                     cart_event::ItemAdded.new(aggregate_id: cart_id, version: 2,
-                                               item_id: item_1_id),
-                     cart_event::ItemAdded.new(aggregate_id: cart_id, version: 3,
-                                               item_id: item_1_id),
                      cart_event::ItemAdded.new(aggregate_id: cart_id, version: 4,
-                                               item_id: item_1_id)
+                                               item_id: item_2_id)
                    ])
+      when_command(cart, cart_command::RemoveItem.new(cart_id, item_2_id))
+      then_events_include(
+        be_a(cart_event::ItemRemoved).and(have_attributes(version: 5,
+                                                          data: { item: item_2_id }))
+      )
+    end
+
+    it 'should error when attempting to remove an item that is not in the cart' do
       expect do
         when_command(cart, cart_command::RemoveItem.new(cart_id, item_2_id))
       end.to raise_error(SimpleEventModeling::Common::Errors::InvalidCommandError,
