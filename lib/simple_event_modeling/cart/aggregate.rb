@@ -18,13 +18,13 @@ module SimpleEventModeling
         hydrate(id: command.aggregate_id)
 
         case command
-        when SimpleEventModeling::Cart::Commands::CreateCart
+        when Commands::CreateCart
           handle_create_cart_command
-        when SimpleEventModeling::Cart::Commands::AddItem
+        when Commands::AddItem
           handle_add_item_command(command)
-        when SimpleEventModeling::Cart::Commands::RemoveItem
+        when Commands::RemoveItem
           handle_remove_item_command(command)
-        when SimpleEventModeling::Cart::Commands::ClearCart
+        when Commands::ClearCart
           handle_clear_cart_command(command)
         else
           raise "Unknown command type: #{command.class}"
@@ -33,11 +33,11 @@ module SimpleEventModeling
 
       def on(event)
         case event
-        when SimpleEventModeling::Cart::DomainEvents::CartCreated
+        when DomainEvents::CartCreated
           on_cart_created(event)
-        when SimpleEventModeling::Cart::DomainEvents::ItemAdded
+        when DomainEvents::ItemAdded
           on_add_item(event)
-        when SimpleEventModeling::Cart::DomainEvents::CartCleared
+        when DomainEvents::CartCleared
           on_cart_cleared(event)
         else
           raise "Unhandled event type: #{event.class}"
@@ -64,7 +64,7 @@ module SimpleEventModeling
 
       def handle_create_cart_command
         cart_id = SecureRandom.uuid
-        event = SimpleEventModeling::Cart::DomainEvents::CartCreated.new(aggregate_id: cart_id)
+        event = DomainEvents::CartCreated.new(aggregate_id: cart_id)
         on(event)
         store.append(event)
         event
@@ -79,8 +79,8 @@ module SimpleEventModeling
         end >= 3
 
         item_id = command.item_id
-        event = SimpleEventModeling::Cart::DomainEvents::ItemAdded.new(aggregate_id: @id, version: @version + 1,
-                                                                       item_id: item_id)
+        event = DomainEvents::ItemAdded.new(aggregate_id: @id, version: @version + 1,
+                                            item_id: item_id)
         on(event)
         store.append(event)
         event
@@ -95,8 +95,8 @@ module SimpleEventModeling
           raise SimpleEventModeling::Common::Errors::InvalidCommandError.new("Item #{item_id} is not in the cart")
         end
 
-        event = SimpleEventModeling::Cart::DomainEvents::ItemRemoved.new(aggregate_id: @id, version: @version + 1,
-                                                                         item_id: item_id)
+        event = DomainEvents::ItemRemoved.new(aggregate_id: @id, version: @version + 1,
+                                              item_id: item_id)
         on(event)
         store.append(event)
         event
@@ -105,7 +105,7 @@ module SimpleEventModeling
       def handle_clear_cart_command(command)
         raise 'Cart not initialized' unless @id
 
-        event = SimpleEventModeling::Cart::DomainEvents::CartCleared.new(aggregate_id: @id, version: @version + 1)
+        event = DomainEvents::CartCleared.new(aggregate_id: @id, version: @version + 1)
         on(event)
         store.append(event)
         event

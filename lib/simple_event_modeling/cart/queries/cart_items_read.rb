@@ -8,7 +8,7 @@ module SimpleEventModeling
       # Iterates over all cart-related events and builds a projection of items, quantities, and totals.
       #
       # @example
-      #   query = SimpleEventModeling::Cart::Queries::CartItemsRead.new(cart_id, store)
+      #   query = Queries::CartItemsRead.new(cart_id, store)
       #   result = query.execute
       #   # => { cart: { cart_id: ..., items: {...}, totals: {...} } }
       #
@@ -34,13 +34,13 @@ module SimpleEventModeling
 
         def on(event)
           case event
-          when SimpleEventModeling::Cart::DomainEvents::CartCreated
+          when DomainEvents::CartCreated
             on_cart_created(event)
-          when SimpleEventModeling::Cart::DomainEvents::ItemAdded
+          when DomainEvents::ItemAdded
             on_add_item(event)
-          when SimpleEventModeling::Cart::DomainEvents::ItemRemoved
+          when DomainEvents::ItemRemoved
             on_item_removed(event)
-          when SimpleEventModeling::Cart::DomainEvents::CartCleared
+          when DomainEvents::CartCleared
             on_cart_cleared(event)
           else
             raise "Unhandled event type: #{event.class}"
