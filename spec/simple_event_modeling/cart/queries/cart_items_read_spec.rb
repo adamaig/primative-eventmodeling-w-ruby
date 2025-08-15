@@ -2,9 +2,10 @@
 
 require 'spec_helper'
 
-RSpec.describe SimpleEventModeling::Cart::Queries::CartItemsRead do
-  # this is a hacky way of shortening the namespace
-  let(:cart_events) { SimpleEventModeling::Cart::DomainEvents }
+RSpec.describe SimpleEventModeling::Cart::Queries::CartItemsRead do # rubocop:disable Metrics/BlockLength
+  # Shortened namespace for cart events
+  let(:cart_event) { SimpleEventModeling::Cart::DomainEvents }
+
   let(:cart_id) { SecureRandom.uuid }
   let(:item_1_id) { 'item-456' }
   let(:item_2_id) { 'item-789' }
@@ -12,7 +13,7 @@ RSpec.describe SimpleEventModeling::Cart::Queries::CartItemsRead do
 
   it 'should be the basic projection when the cart is created' do
     events = [
-      SimpleEventModeling::Cart::DomainEvents::CartCreated.new(aggregate_id: cart_id)
+      cart_event::CartCreated.new(aggregate_id: cart_id)
     ]
     events.each { |event| store.append(event) }
     expect(
@@ -30,10 +31,10 @@ RSpec.describe SimpleEventModeling::Cart::Queries::CartItemsRead do
 
   it 'should read the cart items' do
     events = [
-      cart_events::CartCreated.new(aggregate_id: cart_id),
-      cart_events::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id),
-      cart_events::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_2_id),
-      cart_events::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_1_id)
+      cart_event::CartCreated.new(aggregate_id: cart_id),
+      cart_event::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id),
+      cart_event::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_2_id),
+      cart_event::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_1_id)
     ]
     events.each { |event| store.append(event) }
     expect(
@@ -58,12 +59,12 @@ RSpec.describe SimpleEventModeling::Cart::Queries::CartItemsRead do
 
   it 'should project the expected quantity and cost of items in the cart' do
     events = [
-      cart_events::CartCreated.new(aggregate_id: cart_id),
-      cart_events::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id),
-      cart_events::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_2_id),
-      cart_events::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_1_id),
-      cart_events::ItemRemoved.new(aggregate_id: cart_id, version: 5, item_id: item_1_id),
-      cart_events::ItemRemoved.new(aggregate_id: cart_id, version: 6, item_id: item_2_id)
+      cart_event::CartCreated.new(aggregate_id: cart_id),
+      cart_event::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id),
+      cart_event::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_2_id),
+      cart_event::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_1_id),
+      cart_event::ItemRemoved.new(aggregate_id: cart_id, version: 5, item_id: item_1_id),
+      cart_event::ItemRemoved.new(aggregate_id: cart_id, version: 6, item_id: item_2_id)
     ]
     events.each { |event| store.append(event) }
     expect(
@@ -83,11 +84,11 @@ RSpec.describe SimpleEventModeling::Cart::Queries::CartItemsRead do
 
   it 'should have an empty item list when cleared' do
     events = [
-      cart_events::CartCreated.new(aggregate_id: cart_id),
-      cart_events::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id),
-      cart_events::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_2_id),
-      cart_events::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_1_id),
-      cart_events::CartCleared.new(aggregate_id: cart_id, version: 5)
+      cart_event::CartCreated.new(aggregate_id: cart_id),
+      cart_event::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id),
+      cart_event::ItemAdded.new(aggregate_id: cart_id, version: 3, item_id: item_2_id),
+      cart_event::ItemAdded.new(aggregate_id: cart_id, version: 4, item_id: item_1_id),
+      cart_event::CartCleared.new(aggregate_id: cart_id, version: 5)
     ]
     events.each { |event| store.append(event) }
     expect(

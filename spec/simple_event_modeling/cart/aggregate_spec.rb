@@ -2,14 +2,18 @@
 
 require 'spec_helper'
 
-RSpec.describe SimpleEventModeling::Cart::Aggregate do
+RSpec.describe SimpleEventModeling::Cart::Aggregate do # rubocop:disable Metrics/BlockLength
+  # Shortened namespace for cart events and commands
+  let(:cart_event) { SimpleEventModeling::Cart::DomainEvents }
+  let(:cart_command) { SimpleEventModeling::Cart::Commands }
+
   let(:store) { SimpleEventModeling::Common::EventStore.new }
   let(:cart) { described_class.new(store) }
   let(:cart_id) { 'cart-123' }
   let(:item_1_id) { 'item-456' }
   let(:item_2_id) { 'item-789' }
-  let(:create_cart_event) { SimpleEventModeling::Cart::DomainEvents::CartCreated.new(aggregate_id: cart_id) }
-  let(:add_item_event) { SimpleEventModeling::Cart::DomainEvents::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id) }
+  let(:create_cart_event) { cart_event::CartCreated.new(aggregate_id: cart_id) }
+  let(:add_item_event) { cart_event::ItemAdded.new(aggregate_id: cart_id, version: 2, item_id: item_1_id) }
 
   it 'should include Aggregate module' do
     expect(cart).to be_a(SimpleEventModeling::Common::Aggregate)
@@ -47,29 +51,29 @@ RSpec.describe SimpleEventModeling::Cart::Aggregate do
 
   describe '#handle(command)' do
     context 'when handling CreateCart command' do
-      let(:command) { SimpleEventModeling::Cart::Commands::CreateCart.new }
+      let(:command) { cart_command::CreateCart.new }
 
       it 'should create a cart and return a CartCreated event' do
         result = cart.handle(command)
-        expect(result).to be_a(SimpleEventModeling::Cart::DomainEvents::CartCreated)
+        expect(result).to be_a(cart_event::CartCreated)
         expect(result.aggregate_id).not_to be_nil
         expect(cart.isLive?).to eq(true)
       end
     end
 
     context 'when handling AddItem command' do
-      let(:command) { SimpleEventModeling::Cart::Commands::AddItem.new(aggregate_id: cart_id, item_id: item_1_id) }
+      let(:command) { cart_command::AddItem.new(aggregate_id: cart_id, item_id: item_1_id) }
 
       it 'should add an item to the cart' do
         store.append(create_cart_event)
         result = cart.handle(command)
-        expect(result).to be_a(SimpleEventModeling::Cart::DomainEvents::ItemAdded)
+        expect(result).to be_a(cart_event::ItemAdded)
         expect(cart.items[item_1_id]).to eq(1)
       end
     end
 
     context 'when handling an unknown command type' do
-      let(:unknown_command) { SimpleEventModeling::Cart::Commands::Unknown.new(aggregate_id: nil) }
+      let(:unknown_command) { cart_command::Unknown.new(aggregate_id: nil) }
 
       it 'should raise an error' do
         expect do
