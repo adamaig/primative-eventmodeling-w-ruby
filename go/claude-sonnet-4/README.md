@@ -8,30 +8,50 @@ A Go implementation of the SimpleEventModeling library, demonstrating event-driv
 
 ## Architecture Overview
 
-### Core Components
+### Package Organization
+
+The library is organized with clear separation of concerns, with each major concept in its own dedicated file:
 
 #### Common Package (`common/`)
-- **Event**: Simple record structure containing event data (ID, Type, CreatedAt, AggregateID, Version, Data, Metadata)
-- **EventStore**: In-memory event persistence with stream management
-- **BaseAggregate**: Foundation for event-sourced aggregates with hydration and lifecycle management
-- **Errors**: Custom error types for the event modeling system
+- **`common.go`**: Package documentation and overview
+- **`errors.go`**: Error types and constants (`InvalidCommandError`, `StreamNotFoundError`)
+- **`event.go`**: Event struct and creation functions
+- **`event_store.go`**: EventStore implementation for in-memory persistence
+- **`aggregate.go`**: Aggregate interface and BaseAggregate implementation
 
 #### Cart Package (`cart/`)
-- **Commands**: Simple structs representing user intents (CreateCart, AddItem, RemoveItem, ClearCart)
-- **Events**: Factory functions for domain events (CartCreated, ItemAdded, ItemRemoved, CartCleared)
-- **CartAggregate**: Event-sourced shopping cart implementation
+- **`cart.go`**: Package documentation and domain overview
+- **`commands.go`**: Command types (CreateCart, AddItem, RemoveItem, ClearCart)
+- **`events.go`**: Event factory functions and constants
+- **`aggregate.go`**: CartAggregate implementation with business logic
+
+### Core Components
+
+#### Event System
+- **Event**: Simple record structure containing event data (ID, Type, CreatedAt, AggregateID, Version, Data, Metadata)
+- **EventStore**: In-memory event persistence with stream management and retrieval
+- **Event Types**: Domain-specific events created via factory functions
+
+#### Aggregate System  
+- **BaseAggregate**: Foundation for event-sourced aggregates with hydration and lifecycle management
+- **CartAggregate**: Event-sourced shopping cart implementation demonstrating business rules
+- **Command Handling**: Validation and event generation based on business logic
+
+#### Error Handling
+- **Custom Error Types**: Domain-specific errors for validation and system states
+- **Explicit Error Handling**: Go's error interface for clear error propagation
 
 ## Key Design Principles
 
 ### 1. Commands and Events as Simple Records
 ```go
-// Command - no behavior, just data
+// Command - no behavior, just data (in commands.go)
 type AddItemCommand struct {
     AggregateID string
     ItemID      string
 }
 
-// Event creation - factory function returns simple Event struct
+// Event creation - factory function returns simple Event struct (in events.go)
 func NewItemAddedEvent(aggregateID string, version int, itemID string) *common.Event {
     data := map[string]interface{}{"item": itemID}
     return common.NewEvent(EventTypeItemAdded, aggregateID, version, data, nil)
@@ -40,6 +60,7 @@ func NewItemAddedEvent(aggregateID string, version int, itemID string) *common.E
 
 ### 2. Aggregates Handle Command Validation
 ```go
+// CartAggregate implementation (in aggregate.go)
 func (ca *CartAggregate) Handle(command interface{}) (*common.Event, error) {
     // Hydrate from event stream
     if err := ca.Hydrate(aggregateID); err != nil {
@@ -61,10 +82,12 @@ func (ca *CartAggregate) Handle(command interface{}) (*common.Event, error) {
 
 ### 3. Event Replay for Aggregate Hydration
 ```go
+// BaseAggregate hydration (in common/aggregate.go)
 func (ca *CartAggregate) Hydrate(id string) error {
     return ca.BaseAggregate.Hydrate(id, ca.On)
 }
 
+// Event handling (in cart/aggregate.go)
 func (ca *CartAggregate) On(event *common.Event) error {
     switch event.Type {
     case EventTypeItemAdded:
@@ -114,16 +137,35 @@ go test -v ./...
 
 ```
 go/claude-sonnet-4/
-├── go.mod                 # Go module definition
-├── main.go               # Demo application
-├── README.md             # This file
-├── common/
-│   ├── common.go         # Core event modeling types and interfaces
-│   └── common_test.go    # Tests for common package
-└── cart/
-    ├── cart.go           # Cart domain implementation  
-    └── cart_test.go      # Tests for cart package
+├── go.mod                    # Go module definition
+├── main.go                   # Basic demo application
+├── README.md                 # This documentation
+├── common/                   # Core framework package
+│   ├── common.go             # Package documentation
+│   ├── errors.go             # Error types and constants
+│   ├── event.go              # Event struct and creation
+│   ├── event_store.go        # EventStore implementation
+│   ├── aggregate.go          # Aggregate interface and base
+│   └── common_test.go        # Framework tests
+├── cart/                     # Cart domain package
+│   ├── cart.go               # Package documentation
+│   ├── commands.go           # Command types
+│   ├── events.go             # Event factory functions
+│   ├── aggregate.go          # CartAggregate implementation
+│   ├── cart_test.go          # Domain tests
+│   └── cart_bench_test.go    # Performance benchmarks
+└── examples/
+    └── advanced_demo.go      # Advanced usage examples
 ```
+
+### File Organization Benefits
+
+- **Single Responsibility**: Each file focuses on one specific concept
+- **Better Maintainability**: Changes to one concept don't affect others  
+- **Improved Readability**: Smaller, focused files (20-80 lines vs 200-300)
+- **Enhanced Documentation**: Targeted documentation for each concept
+- **Team Collaboration**: Multiple developers can work on different concepts
+- **Easier Testing**: Concepts can be tested and understood in isolation
 
 ## Key Features Demonstrated
 
@@ -167,12 +209,37 @@ The Go version emphasizes:
 
 ## Testing
 
-Comprehensive tests cover:
-- Event creation and storage
-- Aggregate command handling
-- Event replay and hydration
-- Business rule validation
-- Error conditions
-- State transitions
+Comprehensive tests cover all aspects of the library:
 
-Run tests with: `go test -v ./...`
+### Test Coverage by Package
+- **Common Package**: Event creation, EventStore functionality, BaseAggregate lifecycle
+- **Cart Package**: Command handling, business rules, event replay, error conditions
+- **Integration Tests**: End-to-end workflows and state transitions
+- **Performance Tests**: Benchmarks for command processing and event replay
+
+### Test Organization
+```
+common/common_test.go    # Framework component tests
+cart/cart_test.go        # Domain logic and business rule tests  
+cart/cart_bench_test.go  # Performance benchmarks
+```
+
+### Running Tests
+```bash
+# Run all tests
+go test -v ./...
+
+# Run specific package tests
+go test -v ./common
+go test -v ./cart
+
+# Run with benchmarks
+go test -bench=. ./cart
+```
+
+### Test Categories
+- **Unit Tests**: Individual component functionality
+- **Integration Tests**: Aggregate command handling and event replay
+- **Business Rule Tests**: Domain-specific validation logic
+- **Error Condition Tests**: Invalid commands and edge cases
+- **Performance Tests**: Operation throughput and memory usage
