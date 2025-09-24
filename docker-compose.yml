@@ -1,7 +1,7 @@
 
 services:
   ruby-event-modeling:
-    image: mcr.microsoft.com/devcontainers/ruby:latest
+    image: library/ruby:bookworm
     volumes:
       # Mount the root folder that contains .git
       - .:/workspace:cached
