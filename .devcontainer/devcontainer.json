@@ -3,7 +3,7 @@
 {
 	"name": "primative-eventmodeling-w-ruby",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-  "dockerComposeFile": "../docker-compose.yml",
+  "dockerComposeFile": "./docker-compose.yml",
   "service": "ruby-event-modeling",
   "workspaceFolder": "/workspace",
 	// Features to add to the dev container. More info: https://containers.dev/features.
